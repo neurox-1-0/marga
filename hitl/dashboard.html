@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Operations Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #020617, #0f172a);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(to right, var(--warning), var(--danger));
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.7);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .event-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .event-detail {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .metric-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .metric-value.highlight {
+            color: var(--accent);
+        }
+        
+        .recommendation {
+            background: rgba(56, 189, 248, 0.1);
+            border-left: 3px solid var(--accent);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .options-list {
+            margin-bottom: 1.5rem;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .option-item input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-approve {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-approve:hover {
+            background: #059669;
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-reject {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-reject:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .loading {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 3rem;
+            font-style: italic;
+        }
+        
+        .empty-state {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 4rem;
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px dashed var(--border);
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Disruption Command Center</h1>
+            <div style="color: var(--text-muted); font-size: 0.875rem;">Live Monitoring Active</div>
+        </header>
+
+        <div id="cards-container" class="cards-grid">
+            <div class="loading">Loading pending approvals...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8004';
+        const POLL_INTERVAL = 3000;
+
+        async function fetchPendingCards() {
+            try {
+                const response = await fetch(`${API_URL}/cards/pending`);
+                const cards = await response.json();
+                renderCards(cards);
+            } catch (error) {
+                console.error("Error fetching cards:", error);
+            }
+        }
+
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        }
+
+        function renderCards(cards) {
+            const container = document.getElementById('cards-container');
+            
+            if (cards.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1rem; opacity: 0.5;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h2>All Clear</h2>
+                        <p>No pending disruption approvals at the moment.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+
+            cards.forEach(card => {
+                const poCount = card.exposure.matched_pos.length;
+                const value = formatCurrency(card.exposure.total_inventory_value_usd);
+                const savings = formatCurrency(card.cost_analysis.reroute_savings_usd);
+                
+                let quotesHtml = '';
+                if (card.freight_options.quotes.length > 0) {
+                    quotesHtml = '<div class="options-list"><div class="metric-label">Alternative Routing Options</div>';
+                    card.freight_options.quotes.forEach((q, idx) => {
+                        const checked = q.quote_id === card.cost_analysis.best_reroute_option?.quote_id ? 'checked' : '';
+                        quotesHtml += `
+                            <label class="option-item">
+                                <input type="radio" name="quote_${card.event.event_id}" value="${q.quote_id}" ${checked}>
+                                <span style="font-size:0.875rem">${q.carrier} (${q.mode}) - ${formatCurrency(q.cost_usd)} - ${q.transit_days} days</span>
+                            </label>
+                        `;
+                    });
+                    quotesHtml += '</div>';
+                }
+
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.innerHTML = `
+                    <div class="card-header">
+                        <span class="badge">Action Required</span>
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">${new Date(card.event.detected_at).toLocaleDateString()}</span>
+                    </div>
+                    <h3 class="event-title">${card.event.source}</h3>
+                    <p class="event-detail">
+                        Vessel <strong>${card.event.vessel_id}</strong> on route <strong>${card.event.route}</strong>.<br>
+                        ${card.event.description}
+                    </p>
+                    
+                    <div class="metric-group">
+                        <div class="metric">
+                            <span class="metric-label">Impacted POs</span>
+                            <span class="metric-value">${poCount}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Inventory at Risk</span>
+                            <span class="metric-value">${value}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Stockout Cost Est.</span>
+                            <span class="metric-value highlight">${formatCurrency(card.cost_analysis.stockout_cost_usd)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Projected Savings</span>
+                            <span class="metric-value" style="color:var(--success)">${savings}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="recommendation">
+                        <strong>AI Recommendation:</strong> ${card.cost_analysis.recommendation}
+                    </div>
+                    
+                    ${quotesHtml}
+
+                    <div class="actions">
+                        <button class="btn-reject" onclick="submitDecision('${card.event.event_id}', 'rejected')">Do Nothing</button>
+                        <button class="btn-approve" onclick="submitDecision('${card.event.event_id}', 'approved')">Approve Reroute</button>
+                    </div>
+                `;
+                container.appendChild(cardEl);
+            });
+        }
+
+        async function submitDecision(eventId, decision) {
+            // Get selected quote
+            const radioGrp = document.querySelector(`input[name="quote_${eventId}"]:checked`);
+            const chosenQuoteId = radioGrp ? radioGrp.value : null;
+
+            const payload = {
+                event_id: eventId,
+                decision: decision,
+                chosen_quote_id: chosenQuoteId,
+                manager_note: decision === 'approved' ? "Approved via Dashboard" : "Rejected via Dashboard"
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/cards/${eventId}/decision`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    // Instantly refresh cards
+                    fetchPendingCards();
+                } else {
+                    alert('Failed to submit decision.');
+                }
+            } catch (error) {
+                console.error("Error submitting decision:", error);
+                alert('Connection error.');
+            }
+        }
+
+        // Initial fetch and polling
+        fetchPendingCards();
+        setInterval(fetchPendingCards, POLL_INTERVAL);
+    </script>
+</body>
+</html>

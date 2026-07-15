@@ -1,0 +1,67 @@
+[
+    {
+        "po_id": "PO-1001",
+        "sku": "ELEC-001",
+        "product_name": "High-End GPUs",
+        "quantity": 500,
+        "unit_value_usd": 1200.0,
+        "vessel_id": "Evergreen",
+        "route": "Shanghai to Los Angeles",
+        "customer_order_ids": [
+            "CO-991",
+            "CO-992"
+        ],
+        "match_confidence": 1.0
+    },
+    {
+        "po_id": "PO-1002",
+        "sku": "ELEC-002",
+        "product_name": "Smartphones",
+        "quantity": 2000,
+        "unit_value_usd": 800.0,
+        "vessel_id": "Evergreen",
+        "route": "Shanghai to Los Angeles",
+        "customer_order_ids": [
+            "CO-993"
+        ],
+        "match_confidence": 1.0
+    },
+    {
+        "po_id": "PO-1003",
+        "sku": "ACC-001",
+        "product_name": "Phone Cases",
+        "quantity": 10000,
+        "unit_value_usd": 15.0,
+        "vessel_id": "Evergreen",
+        "route": "Shanghai to Los Angeles",
+        "customer_order_ids": [],
+        "match_confidence": 1.0
+    },
+    {
+        "po_id": "PO-1004",
+        "sku": "ELEC-003",
+        "product_name": "Laptops",
+        "quantity": 300,
+        "unit_value_usd": 1500.0,
+        "vessel_id": "Evergreen-V2",
+        "route": "Shanghai to Los Angeles",
+        "customer_order_ids": [
+            "CO-994",
+            "CO-995"
+        ],
+        "match_confidence": 0.6
+    },
+    {
+        "po_id": "PO-2001",
+        "sku": "FURN-001",
+        "product_name": "Office Chairs",
+        "quantity": 100,
+        "unit_value_usd": 150.0,
+        "vessel_id": "MSC-Maersk",
+        "route": "Rotterdam to New York",
+        "customer_order_ids": [
+            "CO-881"
+        ],
+        "match_confidence": 1.0
+    }
+]
