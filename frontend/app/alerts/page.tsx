@@ -1,6 +1,34 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getPendingCards, ApprovalCard } from "../../lib/api";
 
 export default function AlertsPage() {
+  const [cards, setCards] = useState<ApprovalCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const fetchCards = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const data = await getPendingCards();
+      setCards(data);
+    } catch (err) {
+      console.error(err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCards();
+  }, []);
+
+  const totalExposure = cards.reduce((sum, card) => sum + card.exposure.total_inventory_value_usd, 0);
+
   return (
     <main className="ml-64 mt-16 p-unit-lg h-[calc(100vh-64px)] overflow-y-auto space-y-unit-lg">
       
@@ -46,105 +74,74 @@ export default function AlertsPage() {
 
       {/* Alert Cards */}
       <div className="space-y-4">
-        {/* Card 1 */}
-        <Link href="/alerts/1" className="block card-surface rounded-xl border-l-4 border-l-amber-500 p-unit-md hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-[12px] font-semibold text-on-surface">Port Strike — Shanghai Terminal 2</h3>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-error/10 text-error">
-              High
-            </span>
+        {loading ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="block card-surface rounded-xl border-l-4 border-l-surface-container-high p-unit-md animate-pulse">
+                <div className="h-4 bg-surface-container-high rounded w-1/3 mb-4"></div>
+                <div className="flex space-x-3 mb-4">
+                  <div className="h-3 bg-surface-container-high rounded w-1/4"></div>
+                  <div className="h-3 bg-surface-container-high rounded w-1/6"></div>
+                  <div className="h-3 bg-surface-container-high rounded w-1/6"></div>
+                </div>
+                <div className="h-1.5 bg-surface-container-high rounded-full w-full mb-3"></div>
+                <div className="h-2 bg-surface-container-high rounded w-1/4"></div>
+              </div>
+            ))}
+          </>
+        ) : error ? (
+          <div className="bg-error/10 text-error rounded-xl p-unit-md flex justify-between items-center">
+            <span className="text-sm font-semibold">Failed to fetch active alerts from the backend.</span>
+            <button onClick={fetchCards} className="px-4 py-2 bg-error text-white rounded-lg text-xs font-bold hover:brightness-110">
+              Retry
+            </button>
           </div>
-          
-          <div className="flex items-center space-x-3 mb-4">
-            <p className="text-[10px] text-on-surface-variant font-medium flex items-center">
-              Shanghai <span className="material-symbols-outlined text-[12px] mx-1">arrow_forward</span> Los Angeles
-            </p>
-            <span className="px-2 py-0.5 rounded bg-surface-container-high text-primary text-[10px] font-bold">
-              8 POs Affected
-            </span>
-            <span className="px-2 py-0.5 rounded bg-error/10 text-error text-[10px] font-bold">
-              $184,000 at risk
-            </span>
+        ) : cards.length === 0 ? (
+          <div className="card-surface rounded-xl p-unit-md text-center text-on-surface-variant">
+            No active disruptions found.
           </div>
+        ) : (
+          cards.map((card) => (
+            <Link key={card.event.event_id} href={`/alerts/${card.event.event_id}`} className="block card-surface rounded-xl border-l-4 border-l-amber-500 p-unit-md hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-[12px] font-semibold text-on-surface">{card.event.description}</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-error/10 text-error">
+                  High
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-3 mb-4">
+                <p className="text-[10px] text-on-surface-variant font-medium flex items-center">
+                  {card.event.route}
+                </p>
+                <span className="px-2 py-0.5 rounded bg-surface-container-high text-primary text-[10px] font-bold">
+                  {card.exposure.matched_pos.length} POs Affected
+                </span>
+                <span className="px-2 py-0.5 rounded bg-error/10 text-error text-[10px] font-bold">
+                  ${card.exposure.total_inventory_value_usd.toLocaleString()} at risk
+                </span>
+              </div>
 
-          <div className="h-1.5 bg-surface-container-low rounded-full overflow-hidden mb-3">
-            <div className="h-full bg-amber-500 w-[78%]"></div>
-          </div>
-          
-          <div className="flex justify-between items-center text-[9px] text-on-surface-variant font-bold uppercase tracking-widest">
-            <span>Detected 23 min ago · Awaiting Approval</span>
-            <span className="material-symbols-outlined text-primary text-[16px]">chevron_right</span>
-          </div>
-        </Link>
-
-        {/* Card 2 */}
-        <Link href="/alerts/2" className="block card-surface rounded-xl border-l-4 border-l-amber-500 p-unit-md hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-[12px] font-semibold text-on-surface">Typhoon Mawar — South China Sea</h3>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-error/10 text-error">
-              High
-            </span>
-          </div>
-          
-          <div className="flex items-center space-x-3 mb-4">
-            <p className="text-[10px] text-on-surface-variant font-medium flex items-center">
-              Kaohsiung <span className="material-symbols-outlined text-[12px] mx-1">arrow_forward</span> Long Beach
-            </p>
-            <span className="px-2 py-0.5 rounded bg-surface-container-high text-primary text-[10px] font-bold">
-              3 POs Affected
-            </span>
-            <span className="px-2 py-0.5 rounded bg-error/10 text-error text-[10px] font-bold">
-              $62,000 at risk
-            </span>
-          </div>
-
-          <div className="h-1.5 bg-surface-container-low rounded-full overflow-hidden mb-3">
-            <div className="h-full bg-amber-500 w-[58%]"></div>
-          </div>
-          
-          <div className="flex justify-between items-center text-[9px] text-on-surface-variant font-bold uppercase tracking-widest">
-            <span>Detected 1 hr ago · Identifying Exposure</span>
-            <span className="material-symbols-outlined text-primary text-[16px]">chevron_right</span>
-          </div>
-        </Link>
-
-        {/* Card 3 */}
-        <Link href="/alerts/3" className="block card-surface rounded-xl border-l-4 border-l-primary p-unit-md hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-[12px] font-semibold text-on-surface">Suez Canal Delay — MV Nordic</h3>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-surface-container-high text-on-surface-variant">
-              Medium
-            </span>
-          </div>
-          
-          <div className="flex items-center space-x-3 mb-4">
-            <p className="text-[10px] text-on-surface-variant font-medium flex items-center">
-              Rotterdam <span className="material-symbols-outlined text-[12px] mx-1">arrow_forward</span> Singapore
-            </p>
-            <span className="px-2 py-0.5 rounded bg-surface-container-high text-primary text-[10px] font-bold">
-              1 PO Affected
-            </span>
-            <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-bold">
-              $38,000 at risk
-            </span>
-          </div>
-
-          <div className="h-1.5 bg-surface-container-low rounded-full overflow-hidden mb-3">
-            <div className="h-full bg-primary w-[36%]"></div>
-          </div>
-          
-          <div className="flex justify-between items-center text-[9px] text-on-surface-variant font-bold uppercase tracking-widest">
-            <span>Detected 3 hrs ago · Monitoring</span>
-            <span className="material-symbols-outlined text-outline text-[16px]">chevron_right</span>
-          </div>
-        </Link>
+              <div className="h-1.5 bg-surface-container-low rounded-full overflow-hidden mb-3">
+                <div className="h-full bg-amber-500 w-[78%]"></div>
+              </div>
+              
+              <div className="flex justify-between items-center text-[9px] text-on-surface-variant font-bold uppercase tracking-widest">
+                <span>Detected {new Date(card.event.detected_at).toLocaleTimeString()} · Awaiting Approval</span>
+                <span className="material-symbols-outlined text-primary text-[16px]">chevron_right</span>
+              </div>
+            </Link>
+          ))
+        )}
       </div>
 
-      <div className="pt-2 pb-6 flex justify-center">
-        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
-          Showing 3 active disruptions · Total exposure: $284,000 · Last updated: just now
-        </p>
-      </div>
+      {!loading && !error && (
+        <div className="pt-2 pb-6 flex justify-center">
+          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
+            Showing {cards.length} active disruptions · Total exposure: ${totalExposure.toLocaleString()} · Last updated: just now
+          </p>
+        </div>
+      )}
     </main>
   );
 }

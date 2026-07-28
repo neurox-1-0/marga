@@ -1,12 +1,86 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { getPendingCards, submitDecision, ApprovalCard } from "../../../lib/api";
 
 export default function AlertDetailsPage() {
+  const params = useParams();
+  const id = params.id as string;
+  
+  const [card, setCard] = useState<ApprovalCard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
   const [decision, setDecision] = useState<null | 'approved' | 'rejected' | 'redirected' | 'info'>(null);
   const [redirectOption, setRedirectOption] = useState<null | string>(null);
   const [infoLoading, setInfoLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchCard = async () => {
+      try {
+        const cards = await getPendingCards();
+        const found = cards.find(c => c.event.event_id === id);
+        if (found) {
+          setCard(found);
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCard();
+  }, [id]);
+
+  const handleApprove = async () => {
+    if (!card) return;
+    setIsSubmitting(true);
+    try {
+      await submitDecision(card.event.event_id, 'approved', card.cost_analysis.best_reroute_option?.quote_id || null, 'Proceed with recommended action.');
+      setDecision('approved');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to submit decision');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!card) return;
+    setIsSubmitting(true);
+    try {
+      await submitDecision(card.event.event_id, 'rejected', null, 'No action taken.');
+      setDecision('rejected');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to submit decision');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleRedirectSubmit = async (quoteId: string) => {
+    if (!card) return;
+    setIsSubmitting(true);
+    try {
+      await submitDecision(card.event.event_id, 'redirected', quoteId, 'Alternative route selected.');
+      const quote = card.freight_options.quotes.find(q => q.quote_id === quoteId);
+      setRedirectOption(`${quote?.mode} via ${quote?.carrier}`);
+      setDecision('redirected');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to submit decision');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleInfoClick = () => {
     setDecision('info');
@@ -16,6 +90,17 @@ export default function AlertDetailsPage() {
     }, 2000);
   };
 
+  if (loading) {
+    return <main className="ml-64 mt-16 p-unit-lg h-[calc(100vh-64px)] flex items-center justify-center text-on-surface-variant font-bold">Loading...</main>;
+  }
+  
+  if (error || !card) {
+    return <main className="ml-64 mt-16 p-unit-lg h-[calc(100vh-64px)] flex items-center justify-center text-error font-bold">Failed to load alert details.</main>;
+  }
+
+  const bestQuoteId = card.cost_analysis.best_reroute_option?.quote_id;
+  const bestQuote = card.freight_options.quotes.find(q => q.quote_id === bestQuoteId);
+
   const renderDecisionContent = () => {
     if (decision === 'approved') {
       return (
@@ -24,12 +109,12 @@ export default function AlertDetailsPage() {
           <div>
             <h2 className="text-on-surface text-xl font-bold">Reroute Approved</h2>
             <p className="text-on-surface-variant text-sm mt-2">
-              Air-freight booking confirmed via FedEx Freight. ETA: 2 days.
+              Booking confirmed via {bestQuote?.carrier || "Selected Carrier"}. ETA: {bestQuote?.transit_days || "?"} days.
             </p>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 w-full">
             <p className="text-emerald-700 text-sm font-medium">
-              Event ID MRG-2024-0847 has been logged. ERP records updated.
+              Event ID {card.event.event_id} has been logged. ERP records updated.
             </p>
           </div>
           <Link href="/" className="w-full bg-surface-container-low hover:bg-surface-container-high transition-colors text-on-surface border border-outline-variant rounded-lg py-3 font-medium flex items-center justify-center mt-4">
@@ -77,18 +162,15 @@ export default function AlertDetailsPage() {
       return (
         <div className="space-y-4">
           <h2 className="text-on-surface text-lg font-bold mb-4">Select Alternative</h2>
-          <div 
-            onClick={() => setRedirectOption("Rail freight")}
-            className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 cursor-pointer hover:border-primary transition-colors"
-          >
-            <p className="text-on-surface font-medium text-sm">Rail Freight via CN Rail · $2,100 · ETA 6 days</p>
-          </div>
-          <div 
-            onClick={() => setRedirectOption("Alt Port routing")}
-            className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 cursor-pointer hover:border-primary transition-colors"
-          >
-            <p className="text-on-surface font-medium text-sm">Alt Port — Oakland · $3,200 · ETA 3 days</p>
-          </div>
+          {card.freight_options.quotes.map(q => (
+            <div 
+              key={q.quote_id}
+              onClick={() => handleRedirectSubmit(q.quote_id)}
+              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 cursor-pointer hover:border-primary transition-colors"
+            >
+              <p className="text-on-surface font-medium text-sm">{q.mode} via {q.carrier} · ${q.cost_usd.toLocaleString()} · ETA {q.transit_days} days</p>
+            </div>
+          ))}
           <button 
             onClick={() => setDecision(null)}
             className="w-full mt-4 bg-transparent hover:bg-surface-container-high text-on-surface-variant border border-outline-variant py-2 rounded-lg text-sm transition-colors font-medium"
@@ -108,9 +190,9 @@ export default function AlertDetailsPage() {
             <div className="space-y-4 w-full">
               <h2 className="text-on-surface text-xl font-bold">Re-querying Systems...</h2>
               <ul className="text-left space-y-2 text-sm text-on-surface-variant animate-pulse font-medium">
-                <li className="flex items-center"><span className="text-outline-variant mr-2">●</span> ERP: Re-checking PO #4471 match...</li>
-                <li className="flex items-center"><span className="text-outline-variant mr-2">●</span> Project44: Refreshing freight quotes...</li>
-                <li className="flex items-center"><span className="text-outline-variant mr-2">●</span> AIS Feed: Confirming vessel status...</li>
+                <li className="flex items-center"><span className="text-outline-variant mr-2">●</span> ERP: Re-checking PO match...</li>
+                <li className="flex items-center"><span className="text-outline-variant mr-2">●</span> API: Refreshing freight quotes...</li>
+                <li className="flex items-center"><span className="text-outline-variant mr-2">●</span> Feed: Confirming status...</li>
               </ul>
             </div>
           ) : (
@@ -141,22 +223,25 @@ export default function AlertDetailsPage() {
 
         <div className="space-y-3">
           <button 
-            onClick={() => setDecision('approved')}
-            className="w-full bg-primary hover:brightness-110 transition-all text-white rounded-lg py-3 font-semibold flex items-center justify-center shadow-sm text-sm"
+            onClick={handleApprove}
+            disabled={isSubmitting}
+            className="w-full bg-primary hover:brightness-110 disabled:opacity-50 transition-all text-white rounded-lg py-3 font-semibold flex items-center justify-center shadow-sm text-sm"
           >
-            <span className="material-symbols-outlined text-[18px] mr-2">check</span> Approve — Book Air-Freight Reroute
+            <span className="material-symbols-outlined text-[18px] mr-2">check</span> {isSubmitting ? 'Approving...' : 'Approve — Book Recommended Reroute'}
           </button>
           
           <div className="grid grid-cols-2 gap-3">
             <button 
-              onClick={() => setDecision('rejected')}
-              className="bg-transparent hover:bg-error/10 transition-colors text-on-surface-variant hover:text-error hover:border-error border border-outline-variant rounded-lg py-2 font-medium flex items-center justify-center text-sm"
+              onClick={handleReject}
+              disabled={isSubmitting}
+              className="bg-transparent hover:bg-error/10 disabled:opacity-50 transition-colors text-on-surface-variant hover:text-error hover:border-error border border-outline-variant rounded-lg py-2 font-medium flex items-center justify-center text-sm"
             >
               <span className="material-symbols-outlined text-[16px] mr-2">close</span> Reject
             </button>
             <button 
               onClick={() => setDecision('redirected')}
-              className="bg-transparent hover:bg-primary/10 transition-colors text-on-surface-variant hover:text-primary hover:border-primary border border-outline-variant rounded-lg py-2 font-medium flex items-center justify-center text-sm"
+              disabled={isSubmitting}
+              className="bg-transparent hover:bg-primary/10 disabled:opacity-50 transition-colors text-on-surface-variant hover:text-primary hover:border-primary border border-outline-variant rounded-lg py-2 font-medium flex items-center justify-center text-sm"
             >
               <span className="material-symbols-outlined text-[16px] mr-2">swap_horiz</span> Redirect
             </button>
@@ -191,7 +276,7 @@ export default function AlertDetailsPage() {
             Back to Alerts
           </Link>
           <div className="flex items-center space-x-4">
-            <h1 className="text-on-surface font-headline-lg">Port Strike — Shanghai Terminal 2</h1>
+            <h1 className="text-on-surface font-headline-lg">{card.event.description}</h1>
             <span className="bg-error/10 text-error text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
               High Risk
             </span>
@@ -214,25 +299,25 @@ export default function AlertDetailsPage() {
               <div className="grid grid-cols-2 gap-y-4 gap-x-6">
                 <div>
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">Event</p>
-                  <p className="text-on-surface text-[11px] font-medium mt-1">Port Strike — Shanghai Terminal 2</p>
+                  <p className="text-on-surface text-[11px] font-medium mt-1">{card.event.description}</p>
                 </div>
                 <div>
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">Affected Route</p>
-                  <p className="text-on-surface text-[11px] font-medium mt-1">Shanghai → Los Angeles (Trans-Pacific)</p>
+                  <p className="text-on-surface text-[11px] font-medium mt-1">{card.event.route}</p>
                 </div>
                 <div>
-                  <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">Estimated Delay</p>
-                  <p className="text-on-surface text-[11px] font-medium mt-1">5–7 business days</p>
+                  <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">Vessel</p>
+                  <p className="text-on-surface text-[11px] font-medium mt-1">{card.event.vessel_id}</p>
                 </div>
                 <div>
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">Detected</p>
-                  <p className="text-on-surface text-[11px] font-medium mt-1">Today at 09:14 AM via Maritime AIS Feed</p>
+                  <p className="text-on-surface text-[11px] font-medium mt-1">{new Date(card.event.detected_at).toLocaleString()} via {card.event.source}</p>
                 </div>
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-amber-700 text-[10px] font-medium">
-                  Agent confidence: High · All data sourced from live AIS feed + ERP match
+                  Agent confidence: High · All data sourced from live {card.event.source} feed + ERP match
                 </p>
               </div>
             </div>
@@ -244,11 +329,11 @@ export default function AlertDetailsPage() {
               <div className="grid grid-cols-3 gap-unit-md">
                 <div className="bg-surface-container-low rounded-lg p-unit-md">
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-1">POs Affected</p>
-                  <p className="text-on-surface text-2xl font-bold">8</p>
+                  <p className="text-on-surface text-2xl font-bold">{card.exposure.matched_pos.length}</p>
                 </div>
                 <div className="bg-surface-container-low rounded-lg p-unit-md">
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-1">Inventory at Risk</p>
-                  <p className="text-error text-2xl font-bold">$184,000</p>
+                  <p className="text-error text-2xl font-bold">${card.exposure.total_inventory_value_usd.toLocaleString()}</p>
                 </div>
                 <div className="bg-surface-container-low rounded-lg p-unit-md">
                   <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-1">Stockout Risk</p>
@@ -261,34 +346,16 @@ export default function AlertDetailsPage() {
                   <thead>
                     <tr className="border-b border-outline-variant text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low">
                       <th className="px-3 py-2 font-medium">PO Number</th>
-                      <th className="px-3 py-2 font-medium">Category</th>
-                      <th className="px-3 py-2 font-medium text-right">Value (USD)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
-                    <tr className="hover:bg-surface-container-lowest transition-colors">
-                      <td className="p-3 text-on-surface text-[11px] font-medium">PO #4471</td>
-                      <td className="p-3 text-on-surface-variant text-[11px]">Electronics</td>
-                      <td className="p-3 text-on-surface text-[11px] font-medium text-right">$42,000</td>
-                    </tr>
-                    <tr className="hover:bg-surface-container-lowest transition-colors">
-                      <td className="p-3 text-on-surface text-[11px] font-medium">PO #4489</td>
-                      <td className="p-3 text-on-surface-variant text-[11px]">Auto Parts</td>
-                      <td className="p-3 text-on-surface text-[11px] font-medium text-right">$67,000</td>
-                    </tr>
-                    <tr className="hover:bg-surface-container-lowest transition-colors">
-                      <td className="p-3 text-on-surface text-[11px] font-medium">PO #4502</td>
-                      <td className="p-3 text-on-surface-variant text-[11px]">Pharma</td>
-                      <td className="p-3 text-on-surface text-[11px] font-medium text-right">$75,000</td>
-                    </tr>
+                    {card.exposure.matched_pos.map(po => (
+                      <tr key={po} className="hover:bg-surface-container-lowest transition-colors">
+                        <td className="p-3 text-on-surface text-[11px] font-medium">{po}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
-              </div>
-
-              <div className="bg-error/5 border border-error/20 rounded-lg p-3">
-                <p className="text-error text-[10px] font-medium">
-                  3 open customer orders depend on this stock. Production line impact estimated at 2 days.
-                </p>
               </div>
             </div>
 
@@ -301,17 +368,17 @@ export default function AlertDetailsPage() {
                 <div className="bg-emerald-50 border-2 border-emerald-400 rounded-xl p-unit-md flex flex-col justify-between">
                   <div>
                     <span className="text-emerald-600 text-[10px] font-bold tracking-widest mb-2 block uppercase">Recommended</span>
-                    <h3 className="text-on-surface font-bold text-sm">Air-Freight Reroute</h3>
+                    <h3 className="text-on-surface font-bold text-sm">{card.cost_analysis.recommendation}</h3>
                     <p className="text-on-surface-variant text-[11px] mt-2 leading-relaxed font-medium">
-                      Via FedEx Freight<br />
-                      ETA: 2 days<br />
-                      Shanghai Pudong → LAX
+                      Via {bestQuote?.carrier || "N/A"}<br />
+                      ETA: {bestQuote?.transit_days || "?"} days<br />
+                      {bestQuote?.mode || "N/A"}
                     </p>
                   </div>
                   <div className="mt-4 pt-4 border-t border-emerald-200 flex justify-between items-end">
                     <div>
                       <span className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Cost Impact</span>
-                      <p className="text-emerald-700 text-2xl font-bold">$4,500</p>
+                      <p className="text-emerald-700 text-2xl font-bold">${bestQuote?.cost_usd?.toLocaleString() || "0"}</p>
                     </div>
                   </div>
                 </div>
@@ -323,24 +390,17 @@ export default function AlertDetailsPage() {
                     <h3 className="text-on-surface font-bold text-sm">Accept Delay</h3>
                     <p className="text-on-surface-variant text-[11px] mt-2 leading-relaxed font-medium">
                       Stockout cost estimate<br />
-                      5–7 day delay<br />
+                      Delay impact<br />
                       Production line impact
                     </p>
                   </div>
                   <div className="mt-4 pt-4 border-t border-outline-variant flex justify-between items-end">
                     <div>
                       <span className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Cost Impact</span>
-                      <p className="text-error text-2xl font-bold">$28,000 <span className="text-xs font-normal opacity-80">est.</span></p>
+                      <p className="text-error text-2xl font-bold">${card.cost_analysis.stockout_cost_usd.toLocaleString()} <span className="text-xs font-normal opacity-80">est.</span></p>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-start space-x-2">
-                <span className="material-symbols-outlined text-[16px] text-on-surface-variant mt-0.5 shrink-0">info</span>
-                <p className="text-[10px] text-on-surface-variant font-medium">
-                  Cost comparison based on inventory value, lead time impact, and historical stockout data.
-                </p>
               </div>
             </div>
             
@@ -363,37 +423,37 @@ export default function AlertDetailsPage() {
                 <div className="space-y-6 relative z-10">
                   <div className="relative pl-8">
                     <div className="absolute w-2.5 h-2.5 bg-emerald-500 rounded-full left-[7px] top-1 shadow-[0_0_8px_rgba(16,185,129,0.8)] ring-2 ring-surface-container-lowest"></div>
-                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">14:02 UTC</p>
-                    <h4 className="text-on-surface text-[11px] font-bold">Maritime AIS Feed</h4>
-                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">Vessel delay confirmed</p>
+                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">Live</p>
+                    <h4 className="text-on-surface text-[11px] font-bold">Maritime Feed</h4>
+                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">Disruption detected</p>
                   </div>
                   
                   <div className="relative pl-8">
                     <div className="absolute w-2.5 h-2.5 bg-emerald-500 rounded-full left-[7px] top-1 shadow-[0_0_8px_rgba(16,185,129,0.8)] ring-2 ring-surface-container-lowest"></div>
-                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">14:15 UTC</p>
-                    <h4 className="text-on-surface text-[11px] font-bold">ERP (SAP)</h4>
-                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">8 POs matched, $184,000 exposure</p>
+                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">Live</p>
+                    <h4 className="text-on-surface text-[11px] font-bold">ERP</h4>
+                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">{card.exposure.matched_pos.length} POs matched, ${card.exposure.total_inventory_value_usd.toLocaleString()} exposure</p>
                   </div>
                   
                   <div className="relative pl-8">
                     <div className="absolute w-2.5 h-2.5 bg-emerald-500 rounded-full left-[7px] top-1 shadow-[0_0_8px_rgba(16,185,129,0.8)] ring-2 ring-surface-container-lowest"></div>
-                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">14:22 UTC</p>
-                    <h4 className="text-on-surface text-[11px] font-bold">Project44 Freight API</h4>
-                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">Air-freight quote: $4,500</p>
+                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">Live</p>
+                    <h4 className="text-on-surface text-[11px] font-bold">Freight API</h4>
+                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">{card.freight_options.quotes.length} alternative quotes fetched</p>
                   </div>
                   
                   <div className="relative pl-8">
                     <div className="absolute w-2.5 h-2.5 bg-amber-500 rounded-full left-[7px] top-1 ring-2 ring-surface-container-lowest"></div>
-                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">14:23 UTC</p>
+                    <p className="text-on-surface-variant text-[10px] font-mono uppercase tracking-widest block mb-1">Live</p>
                     <h4 className="text-on-surface text-[11px] font-bold">Cost Engine</h4>
-                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">Stockout estimate: $28,000 (approximate)</p>
+                    <p className="text-on-surface-variant text-[10px] font-medium mt-1">Stockout vs Reroute calculated</p>
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-outline-variant pt-4 mt-6">
                 <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest">
-                  Logged at 09:14 AM · Event ID: MRG-2024-0847
+                  Logged at {new Date(card.event.detected_at).toLocaleTimeString()} · Event ID: {card.event.event_id}
                 </p>
               </div>
             </div>

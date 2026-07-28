@@ -1,9 +1,86 @@
+"use client";
+import { useState, useEffect } from "react";
+import { connectAgentStream, triggerDemoDisruption } from "../lib/api";
+
 export default function HomePage() {
+  const [activeStep, setActiveStep] = useState(1);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const disconnect = connectAgentStream((data) => {
+      const msg = JSON.stringify(data).toLowerCase();
+      if (msg.includes('hitl') || msg.includes('pending')) setActiveStep(5);
+      else if (msg.includes('cost') || msg.includes('stockout')) setActiveStep(4);
+      else if (msg.includes('freight') || msg.includes('quote')) setActiveStep(3);
+      else if (msg.includes('exposure') || msg.includes('erp')) setActiveStep(2);
+      else if (msg.includes('monitor') || msg.includes('surveillance')) setActiveStep(1);
+    });
+    return () => disconnect();
+  }, []);
+
+  const handleTriggerDemo = async () => {
+    try {
+      await triggerDemoDisruption('EVT-9999');
+      setToast('Agent loop started — monitoring for disruption EVT-9999');
+      setTimeout(() => setToast(null), 8000);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to trigger demo');
+    }
+  };
+
+  const getStepStatus = (step: number) => {
+    if (activeStep > step) return "completed";
+    if (activeStep === step) return "active";
+    return "pending";
+  };
+
+  const renderStepIcon = (step: number) => {
+    const status = getStepStatus(step);
+    if (status === "completed") {
+      return (
+        <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-500 flex items-center justify-center mr-3 shrink-0">
+          <span className="material-symbols-outlined text-emerald-600 text-[14px] font-bold">check</span>
+        </div>
+      );
+    } else if (status === "active") {
+      return (
+        <div className="w-6 h-6 rounded-full border border-amber-500 flex items-center justify-center mr-3 shrink-0 bg-white relative">
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <div className="absolute inset-0 rounded-full border border-amber-500 animate-ping opacity-20"></div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="w-6 h-6 rounded-full border border-outline-variant flex items-center justify-center mr-3 shrink-0 bg-white">
+          <span className="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+        </div>
+      );
+    }
+  };
+
   return (
     <main className="ml-64 mt-16 p-unit-lg flex space-x-unit-lg h-[calc(100vh-64px)] overflow-hidden">
       {/* Left Panel: Stats & Map */}
       <div className="flex-1 space-y-unit-lg overflow-y-auto pr-2 pb-8">
         
+        <div className="flex justify-between items-center">
+          <h1 className="font-headline-lg text-on-surface">Dashboard</h1>
+          <button 
+            onClick={handleTriggerDemo}
+            className="bg-primary text-white text-[11px] px-unit-md py-unit-sm rounded-lg flex items-center shadow-sm hover:brightness-110"
+          >
+            <span className="material-symbols-outlined text-[16px] mr-1">smart_toy</span>
+            Trigger Live Demo
+          </button>
+        </div>
+
+        {toast && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] rounded-lg px-unit-md py-unit-sm">
+            {toast}
+          </div>
+        )}
+
         {/* Stat Cards Row */}
         <div className="grid grid-cols-4 gap-unit-md">
           <div className="card-surface p-unit-md rounded-xl flex flex-col justify-between h-36">
@@ -237,58 +314,47 @@ export default function HomePage() {
             <div className="space-y-6 relative z-10">
               
               {/* Step 1 */}
-              <div className="flex items-start">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-500 flex items-center justify-center mr-3 shrink-0">
-                  <span className="material-symbols-outlined text-emerald-600 text-[14px] font-bold">check</span>
-                </div>
+              <div className={`flex items-start ${getStepStatus(1) === 'pending' ? 'opacity-40' : ''}`}>
+                {renderStepIcon(1)}
                 <div>
-                  <div className="text-[11px] font-bold text-on-surface">Monitor Surveillance</div>
-                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">Scanning global weather & port AIS feeds. 1,420 nodes active.</div>
+                  <div className={`text-[11px] font-bold ${getStepStatus(1) === 'active' ? 'text-amber-600' : 'text-on-surface'}`}>Monitor Surveillance</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">Scanning global weather & port AIS feeds.</div>
                 </div>
               </div>
               
               {/* Step 2 */}
-              <div className="flex items-start">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-500 flex items-center justify-center mr-3 shrink-0">
-                  <span className="material-symbols-outlined text-emerald-600 text-[14px] font-bold">check</span>
-                </div>
+              <div className={`flex items-start ${getStepStatus(2) === 'pending' ? 'opacity-40' : ''}`}>
+                {renderStepIcon(2)}
                 <div>
-                  <div className="text-[11px] font-bold text-on-surface">Identify Exposure</div>
-                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">Shanghai Terminal 2 disruption mapped to 8 active POs.</div>
+                  <div className={`text-[11px] font-bold ${getStepStatus(2) === 'active' ? 'text-amber-600' : 'text-on-surface'}`}>Identify Exposure</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">Cross-referencing ERP for affected POs.</div>
                 </div>
               </div>
               
               {/* Step 3 */}
-              <div className="flex items-start">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-500 flex items-center justify-center mr-3 shrink-0">
-                  <span className="material-symbols-outlined text-emerald-600 text-[14px] font-bold">check</span>
-                </div>
+              <div className={`flex items-start ${getStepStatus(3) === 'pending' ? 'opacity-40' : ''}`}>
+                {renderStepIcon(3)}
                 <div>
-                  <div className="text-[11px] font-bold text-on-surface">Generate Alternatives</div>
-                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">3 reroute scenarios found via Ningbo Port.</div>
+                  <div className={`text-[11px] font-bold ${getStepStatus(3) === 'active' ? 'text-amber-600' : 'text-on-surface'}`}>Generate Alternatives</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">Fetching active freight quotes & routing options.</div>
                 </div>
               </div>
               
-              {/* Step 4 (Current) */}
-              <div className="flex items-start">
-                <div className="w-6 h-6 rounded-full border border-amber-500 flex items-center justify-center mr-3 shrink-0 bg-white relative">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                  <div className="absolute inset-0 rounded-full border border-amber-500 animate-ping opacity-20"></div>
-                </div>
+              {/* Step 4 */}
+              <div className={`flex items-start ${getStepStatus(4) === 'pending' ? 'opacity-40' : ''}`}>
+                {renderStepIcon(4)}
                 <div>
-                  <div className="text-[11px] font-bold text-amber-600">Reasoning Trade-offs</div>
-                  <div className="text-[10px] text-amber-600/80 mt-0.5 leading-relaxed italic font-medium">Analyzing: Cost +$12k vs. Delay -3 days...</div>
+                  <div className={`text-[11px] font-bold ${getStepStatus(4) === 'active' ? 'text-amber-600' : 'text-on-surface'}`}>Reasoning Trade-offs</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5 leading-relaxed font-medium">Analyzing: Cost vs. Delay impacts...</div>
                 </div>
               </div>
               
-              {/* Step 5 (Pending) */}
-              <div className="flex items-start opacity-40">
-                <div className="w-6 h-6 rounded-full border border-outline-variant flex items-center justify-center mr-3 shrink-0 bg-white">
-                  <span className="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
-                </div>
+              {/* Step 5 */}
+              <div className={`flex items-start ${getStepStatus(5) === 'pending' ? 'opacity-40' : ''}`}>
+                {renderStepIcon(5)}
                 <div>
-                  <div className="text-[11px] font-bold text-on-surface-variant">Propose & Confirm</div>
-                  <div className="text-[10px] text-on-surface-variant/70 mt-0.5 font-medium">Awaiting human oversight</div>
+                  <div className={`text-[11px] font-bold ${getStepStatus(5) === 'active' ? 'text-amber-600' : 'text-on-surface'}`}>Propose & Confirm</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5 font-medium">Awaiting human oversight & HITL approval.</div>
                 </div>
               </div>
 
@@ -296,7 +362,7 @@ export default function HomePage() {
           </div>
           <div className="p-unit-md bg-surface-container-low border-t border-outline-variant rounded-b-xl">
             <button className="w-full bg-primary text-white py-2 rounded-lg text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center space-x-2 shadow-sm">
-              <span>Approve Current Solution</span>
+              <span>View Pending Actions</span>
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
             </button>
           </div>

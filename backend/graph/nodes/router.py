@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 import os
 
 # We require an LLM for dynamic routing to satisfy NeuroX constraint #1
-llm = ChatGoogleGenerativeAI(model="gemini-3.1-pro", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
 
 class RouterDecision(BaseModel):
     next_node: str = Field(description="The name of the next node to route to: 'reasoning_node', 'hitl_gate', 'execute', or 'end'.")
@@ -25,6 +25,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         f"Event ID: {state.get('event_id')}\n"
         f"Matched POs: {len(state.get('matched_pos', []))}\n"
         f"Has Freight Quotes: {len(state.get('freight_quotes', [])) > 0}\n"
+        f"Has Cost Analysis: {state.get('cost_analysis') is not None}\n"
         f"Approval Decision: {state.get('approval_decision')}\n"
     )
     
@@ -33,8 +34,8 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
     determine the next node to execute.
 
     Rules:
-    - If there are no freight quotes or cost analysis yet, route to 'reasoning_node'.
-    - If reasoning is complete but approval is missing, route to 'hitl_gate'.
+    - If there are no freight quotes OR no cost analysis yet, route to 'reasoning_node'.
+    - If reasoning is complete (freight quotes AND cost analysis exist) but approval is missing, route to 'hitl_gate'.
     - If approval is 'approved', route to 'execute'.
     - If approval is 'rejected' or execution is done, route to 'end'.
 
