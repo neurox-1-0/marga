@@ -51,6 +51,12 @@ export async function getPendingCards(): Promise<ApprovalCard[]> {
   return response.json();
 }
 
+export async function getCard(eventId: string): Promise<ApprovalCard> {
+  const res = await fetch(`${API_BASE}/cards/${eventId}`);
+  if (!res.ok) throw new Error('Card not found');
+  return res.json();
+}
+
 export async function submitDecision(
   eventId: string,
   decision: 'approved' | 'rejected' | 'redirected',

@@ -1,25 +1,51 @@
 "use client";
 import { useState, useEffect } from "react";
-import { connectAgentStream, triggerDemoDisruption } from "../lib/api";
+import { connectAgentStream, triggerDemoDisruption, getCard } from "../lib/api";
 
 export default function HomePage() {
-  const [activeStep, setActiveStep] = useState(1);
+  const [activeStep, setActiveStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('agentActiveStep');
+      if (saved) return parseInt(saved, 10);
+    }
+    return 1;
+  });
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('agentActiveStep', activeStep.toString());
+  }, [activeStep]);
+
+  useEffect(() => {
+    // Sync with backend on mount in case we missed a websocket event while on another page
+    getCard('EVT-9999').then(card => {
+      if (card.status === 'approved') setActiveStep(6);
+      else if (card.status === 'rejected') setActiveStep(7);
+      else if (card.status === 'pending' && activeStep < 5) setActiveStep(5);
+    }).catch(e => {
+      // Ignore if card not found
+    });
+  }, []);
 
   useEffect(() => {
     const disconnect = connectAgentStream((data) => {
       const msg = JSON.stringify(data).toLowerCase();
-      if (msg.includes('hitl') || msg.includes('pending')) setActiveStep(5);
-      else if (msg.includes('cost') || msg.includes('stockout')) setActiveStep(4);
-      else if (msg.includes('freight') || msg.includes('quote')) setActiveStep(3);
-      else if (msg.includes('exposure') || msg.includes('erp')) setActiveStep(2);
-      else if (msg.includes('monitor') || msg.includes('surveillance')) setActiveStep(1);
+      const thought = data?.data?.thought?.toLowerCase() || "";
+      const node = data?.data?.node || "";
+
+      if (node === 'execute' && thought.includes('rejected')) setActiveStep(7);
+      else if (node === 'execute' || thought.includes('executing')) setActiveStep(6);
+      else if (node === 'hitl_gate' || thought.includes('hitl') || thought.includes('pending')) setActiveStep(5);
+      else if (thought.includes('cost') || thought.includes('stockout') || thought.includes('saving')) setActiveStep(4);
+      else if (thought.includes('freight') || thought.includes('quote')) setActiveStep(3);
+      else if (thought.includes('exposure') || thought.includes('erp') || thought.includes('po')) setActiveStep(2);
     });
     return () => disconnect();
   }, []);
 
   const handleTriggerDemo = async () => {
     try {
+      setActiveStep(1);
       await triggerDemoDisruption('EVT-9999');
       setToast('Agent loop started — monitoring for disruption EVT-9999');
       setTimeout(() => setToast(null), 8000);
@@ -189,13 +215,17 @@ export default function HomePage() {
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px]">
                   <span className="font-medium text-on-surface">Shanghai → Los Angeles</span>
-                  <span className="text-amber-600 font-bold">78% Risk</span>
+                  <span className={`font-bold ${activeStep === 6 ? 'text-emerald-600' : activeStep === 7 ? 'text-amber-600' : 'text-error'}`}>
+                    {activeStep === 6 ? 'Resolved' : activeStep === 7 ? 'Rejected' : '78% Risk'}
+                  </span>
                 </div>
                 <div className="h-1.5 bg-surface-container-low rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 w-[78%]"></div>
+                  <div className={`h-full ${activeStep === 6 ? 'bg-emerald-500 w-full' : activeStep === 7 ? 'bg-amber-500 w-[78%]' : 'bg-error w-[78%]'}`}></div>
                 </div>
                 <div className="flex justify-between text-[9px] text-on-surface-variant">
-                  <span className="font-medium">Awaiting Approval</span>
+                  <span className={`font-medium ${activeStep === 6 ? 'text-emerald-600' : activeStep === 7 ? 'text-amber-600' : 'text-error'}`}>
+                    {activeStep === 6 ? 'Rerouted & Approved' : activeStep === 7 ? 'Action Rejected' : 'Awaiting Approval'}
+                  </span>
                   <span className="font-medium">8 Shipments</span>
                 </div>
               </div>

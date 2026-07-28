@@ -30,6 +30,9 @@ async def trigger_disruption(event_id: str = "EVT-9999"):
     thread_id = f"{event_id}-{str(uuid.uuid4())}"
     config = {"configurable": {"thread_id": thread_id}}
     
+    from .routers.hitl import thread_db
+    thread_db[event_id] = thread_id
+    
     initial_state = {
         "event_id": event_id,
         "raw_event": {

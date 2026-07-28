@@ -20,6 +20,11 @@ async def execute_node(state: AgentState) -> Dict[str, Any]:
         # Here we would call the booking client.
         result = "Successfully booked reroute."
     else:
+        await broadcast_agent_thought(
+            node="execute",
+            thought="Reroute rejected by human operator. No action taken.",
+            confidence_score=1.0
+        )
         result = "Reroute rejected or no quote selected. No action taken."
         
     return {"execution_result": result}
