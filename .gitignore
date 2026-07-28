@@ -1,12 +1,44 @@
+# Node / Next.js
 node_modules/
 .next/
+
+# Environment variables (never commit secrets)
 .env
 .env.*
-.DS_Store
-__pycache__/
-*.pyc
-*.pyo
-venv/
+
+# Virtual environments
+marga_env/
 .venv/
+venv/
 env/
 .env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Poetry
+poetry.lock
+
+# Pytest
+.pytest_cache/
+
+# Database
+*.db
+*.sqlite3
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
