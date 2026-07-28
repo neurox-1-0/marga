@@ -86,6 +86,7 @@ export async function triggerDemoDisruption(eventId: string): Promise<{ status: 
 export function connectAgentStream(onMessage: (data: any) => void): () => void {
   let ws: WebSocket | null = null;
   let isIntentionalClose = false;
+  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const connect = () => {
     console.log("Connecting WebSocket to:", WS_URL);
@@ -108,7 +109,7 @@ export function connectAgentStream(onMessage: (data: any) => void): () => void {
       console.log("WebSocket closed.");
       if (!isIntentionalClose) {
         console.log("Reconnecting in 2 seconds...");
-        setTimeout(connect, 2000);
+        reconnectTimeout = setTimeout(connect, 2000);
       }
     };
   };
@@ -117,6 +118,7 @@ export function connectAgentStream(onMessage: (data: any) => void): () => void {
   
   return () => {
     isIntentionalClose = true;
+    if (reconnectTimeout) clearTimeout(reconnectTimeout);
     if (ws) ws.close();
   };
 }

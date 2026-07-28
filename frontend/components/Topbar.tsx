@@ -1,8 +1,12 @@
-export default function Topbar() {
+interface TopbarProps {
+  title?: string;
+}
+
+export default function Topbar({ title = "Overview" }: TopbarProps) {
   return (
     <header className="bg-surface/80 backdrop-blur-md h-16 fixed top-0 right-0 left-64 border-b border-outline-variant flex items-center justify-between px-unit-xl z-40">
       <div className="flex items-center space-x-unit-sm">
-        <span className="font-headline-md text-on-surface">Overview</span>
+        <span className="font-headline-md text-on-surface">{title}</span>
         <span className="text-on-surface-variant">/</span>
         <span className="text-on-surface-variant text-sm font-medium">Global Supply Chain</span>
       </div>

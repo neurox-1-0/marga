@@ -3,7 +3,7 @@
 ## 1. Backend Overview
 The Marga backend is a Python-based autonomous agent system designed to handle supply chain disruptions. 
 - **Language/Framework:** Python with FastAPI.
-- **Agentic Framework:** It uses **LangGraph** to manage the state machine and agentic loop, powered by the **Google Gemini API** (`gemini-2.5-pro`) for reasoning.
+- **Agentic Framework:** It uses **LangGraph** to manage the state machine and agentic loop, powered by the **Google Gemini API** (`gemini-flash-latest`) for reasoning.
 - **External Tools Integrated:**
   1. **ERP API:** Fetches purchase orders (POs) and inventory exposed by a disruption.
   2. **Freight API:** Fetches live alternative routing quotes (e.g., Air-freight).
