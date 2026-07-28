@@ -48,6 +48,56 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .main-content {
+            flex: 2;
+        }
+
+        .sidebar {
+            flex: 1;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .thought-item {
+            padding: 1rem;
+            border-left: 3px solid var(--accent);
+            background: rgba(0,0,0,0.2);
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .thought-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .thought-confidence {
+            color: var(--success);
+            font-weight: 600;
         }
 
         .cards-grid {
@@ -223,19 +273,85 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Disruption Command Center</h1>
-            <div style="color: var(--text-muted); font-size: 0.875rem;">Live Monitoring Active</div>
-        </header>
+        <div class="main-content">
+            <header>
+                <h1>Disruption Command Center</h1>
+                <div style="color: var(--text-muted); font-size: 0.875rem;">Live Monitoring Active</div>
+            </header>
 
-        <div id="cards-container" class="cards-grid">
-            <div class="loading">Loading pending approvals...</div>
+            <div id="cards-container" class="cards-grid">
+                <div class="loading">Loading pending approvals...</div>
+            </div>
+        </div>
+        <div class="sidebar" id="agent-thoughts-sidebar">
+            <h2>Agent Thoughts</h2>
+            <div id="thoughts-container">
+                <div class="empty-state" style="padding: 2rem; font-size: 0.875rem;">
+                    Agent is standing by...
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         const API_URL = 'http://localhost:8004';
+        const WS_URL = 'ws://localhost:8004/ws/dashboard';
         const POLL_INTERVAL = 3000;
+        
+        let ws = null;
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    if (payload.type === 'agent_thought') {
+                        addThought(payload.data);
+                    } else if (payload.type === 'state_update') {
+                        console.log('State update:', payload.data);
+                        // trigger a fetch immediately when state changes
+                        fetchPendingCards();
+                    }
+                } catch (e) {
+                    console.error('Error parsing WS message', e);
+                }
+            };
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, retrying in 2s...');
+                setTimeout(connectWebSocket, 2000);
+            };
+        }
+
+        function addThought(data) {
+            const container = document.getElementById('thoughts-container');
+            // Remove empty state if present
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const thoughtEl = document.createElement('div');
+            thoughtEl.className = 'thought-item';
+            
+            let toolsHtml = '';
+            if (data.tool_calls && data.tool_calls.length > 0) {
+                toolsHtml = '<div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--accent);">';
+                data.tool_calls.forEach(t => {
+                    toolsHtml += `<div>🔧 ${t.tool_name}: ${t.rationale}</div>`;
+                });
+                toolsHtml += '</div>';
+            }
+
+            thoughtEl.innerHTML = `
+                <div class="thought-meta">
+                    <span>Node: ${data.node}</span>
+                    <span class="thought-confidence">${(data.confidence_score * 100).toFixed(0)}% Conf</span>
+                </div>
+                <div>${data.thought}</div>
+                ${toolsHtml}
+            `;
+            
+            // Prepend new thought
+            container.insertBefore(thoughtEl, container.firstChild);
+        }
 
         async function fetchPendingCards() {
             try {
@@ -369,6 +485,7 @@
         // Initial fetch and polling
         fetchPendingCards();
         setInterval(fetchPendingCards, POLL_INTERVAL);
+        connectWebSocket();
     </script>
 </body>
 </html>

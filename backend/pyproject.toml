@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "marga-backend"
+version = "0.1.0"
+description = "Backend for Marga, an Autonomous Supply Chain Disruption Agent"
+authors = ["NeuroX Participant"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.111.0"
+uvicorn = {extras = ["standard"], version = "^0.30.1"}
+pydantic = "^2.7.0"
+sqlalchemy = "^2.0.30"
+psycopg2-binary = "^2.9.9"
+pgvector = "^0.2.5"
+alembic = "^1.13.1"
+langchain = "^0.2.0"
+langchain-core = "^0.2.0"
+langgraph = "^0.0.60"
+langchain-google-genai = "^1.0.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
