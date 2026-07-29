@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from typing import List
 from ..graph.builder import graph
 from ..schemas.api import ApprovalCard, ApprovalDecision
-from ..storage import cards_db
 import uuid
 
 router = APIRouter()

@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from .routers.ws import router as ws_router
 from .routers.hitl import router as hitl_router
+from .graph.builder import graph
 import uuid
 
 app = FastAPI(title="Marga Backend API", description="LangGraph-powered supply chain disruption agent.")
