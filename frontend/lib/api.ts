@@ -40,8 +40,48 @@ export interface ApprovalCard {
   chosen_quote_id?: string | null;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws/dashboard";
+export interface POAtRisk {
+  po_id: string;
+  supplier: string;
+  vessel_id: string;
+  product: string;
+  item_code: string;
+  quantity: number;
+  value_usd: number;
+  match_confidence: number;
+}
+
+export interface RouteRisk {
+  route: string;
+  po_count: number;
+  exposure_usd: number;
+  pos: POAtRisk[];
+}
+
+export interface InventoryAtRisk {
+  total_pos: number;
+  at_risk_pos: number;
+  total_exposure_usd: number;
+  routes: RouteRisk[];
+}
+
+export interface ActiveEvent {
+  event_id: string;
+  status: string;
+  route: string;
+  vessel_id: string;
+  source: string;
+  description: string;
+  detected_at: string;
+  matched_pos: string[];
+  exposure_usd: number;
+  stockout_cost_usd: number;
+  reroute_savings_usd: number;
+  chosen_quote_id: string | null;
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8004";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8004/ws/dashboard";
 
 export async function getPendingCards(): Promise<ApprovalCard[]> {
   const response = await fetch(`${API_BASE}/cards/pending`, { cache: 'no-store' });
@@ -127,4 +167,33 @@ export function connectAgentStream(onMessage: (data: any) => void): () => void {
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
     if (ws) ws.close();
   };
+}
+
+export async function getInventoryAtRisk(): Promise<InventoryAtRisk> {
+  const res = await fetch(`${API_BASE}/inventory/at-risk`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch inventory data');
+  return res.json();
+}
+
+export async function getActiveEvents(): Promise<ActiveEvent[]> {
+  const res = await fetch(`${API_BASE}/events/active`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch active events');
+  return res.json();
+}
+
+export async function simulateEvent(params: {
+  route?: string;
+  vessel_id?: string;
+  description?: string;
+  event_type?: string;
+}): Promise<{ status: string; event_id: string; thread_id: string }> {
+  const query = new URLSearchParams({
+    route: params.route ?? 'Shanghai to Los Angeles',
+    vessel_id: params.vessel_id ?? 'Evergreen',
+    description: params.description ?? 'Simulated maritime disruption.',
+    event_type: params.event_type ?? 'Gale Warning',
+  });
+  const res = await fetch(`${API_BASE}/events/simulate?${query}`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to simulate event');
+  return res.json();
 }

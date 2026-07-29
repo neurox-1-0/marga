@@ -1,10 +1,13 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from typing import List
 from ..graph.builder import graph
 from ..schemas.api import ApprovalCard, ApprovalDecision
 from ..models.database import get_db
+from ..models.domain import ApprovalCardDB
 from ..db import crud
+import json, os, pathlib
 
 router = APIRouter()
 
@@ -60,3 +63,98 @@ async def record_decision(
     background_tasks.add_task(resume_graph)
 
     return {"status": "recorded", "decision": decision.decision}
+
+
+# ── Live Dashboard Data Endpoints ──────────────────────────────────────────
+
+def _load_pos_raw() -> list:
+    """Load purchase orders from the data file."""
+    data_path = pathlib.Path(__file__).parent.parent.parent / "data" / "purchase_orders.json"
+    if not data_path.exists():
+        return []
+    with open(data_path) as f:
+        return json.load(f)
+
+
+@router.get("/inventory/at-risk")
+async def get_inventory_at_risk():
+    """
+    Returns live inventory risk stats computed from the actual PO data file.
+    Used to populate the dashboard stat cards with real numbers.
+    """
+    pos = _load_pos_raw()
+    # Only count submitted (docstatus=1) POs
+    active_pos = [p for p in pos if p.get("docstatus", 0) == 1]
+
+    route_map: dict = {}
+    for po in active_pos:
+        route = po.get("custom_route", "Unknown")
+        items = po.get("items", [])
+        total_qty = sum(i.get("qty", 0) for i in items)
+        total_val = sum(i.get("qty", 0) * i.get("rate", 0.0) for i in items)
+
+        if route not in route_map:
+            route_map[route] = {"route": route, "po_count": 0, "exposure_usd": 0.0, "pos": []}
+        route_map[route]["po_count"] += 1
+        route_map[route]["exposure_usd"] += total_val
+        route_map[route]["pos"].append({
+            "po_id": po.get("name"),
+            "supplier": po.get("supplier", ""),
+            "vessel_id": po.get("custom_vessel_id", ""),
+            "product": items[0].get("item_name", "") if items else "",
+            "item_code": items[0].get("item_code", "") if items else "",
+            "quantity": total_qty,
+            "value_usd": total_val,
+            "match_confidence": po.get("custom_match_confidence", 1.0),
+        })
+
+    routes = sorted(route_map.values(), key=lambda r: r["exposure_usd"], reverse=True)
+    total_exposure = sum(r["exposure_usd"] for r in routes)
+
+    return {
+        "total_pos": len(active_pos),
+        "at_risk_pos": len(active_pos),   # all active POs are tracked; NOAA events subset this
+        "total_exposure_usd": round(total_exposure, 2),
+        "routes": [
+            {
+                "route": r["route"],
+                "po_count": r["po_count"],
+                "exposure_usd": round(r["exposure_usd"], 2),
+                "pos": r["pos"],
+            }
+            for r in routes
+        ],
+    }
+
+
+@router.get("/events/active")
+async def get_active_events(db: AsyncSession = Depends(get_db)):
+    """
+    Returns all approval cards (pending + recently resolved) enriched with
+    event details for the Active Alerts panel on the dashboard.
+    """
+    result = await db.execute(select(ApprovalCardDB).order_by(ApprovalCardDB.updated_at.desc()).limit(20))
+    db_cards = result.scalars().all()
+
+    events = []
+    for db_card in db_cards:
+        data = db_card.card_data or {}
+        event = data.get("event", {})
+        exposure = data.get("exposure", {})
+        cost = data.get("cost_analysis", {})
+        events.append({
+            "event_id": db_card.event_id,
+            "status": db_card.status,
+            "route": event.get("route", ""),
+            "vessel_id": event.get("vessel_id", ""),
+            "source": event.get("source", ""),
+            "description": event.get("description", ""),
+            "detected_at": event.get("detected_at", ""),
+            "matched_pos": exposure.get("matched_pos", []),
+            "exposure_usd": exposure.get("total_inventory_value_usd", 0.0),
+            "stockout_cost_usd": cost.get("stockout_cost_usd", 0.0),
+            "reroute_savings_usd": cost.get("reroute_savings_usd", 0.0),
+            "chosen_quote_id": db_card.chosen_quote_id,
+        })
+
+    return events
