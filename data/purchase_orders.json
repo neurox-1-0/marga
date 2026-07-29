@@ -1,67 +1,87 @@
 [
     {
-        "po_id": "PO-1001",
-        "sku": "ELEC-001",
-        "product_name": "High-End GPUs",
-        "quantity": 500,
-        "unit_value_usd": 1200.0,
-        "vessel_id": "Evergreen",
-        "route": "Shanghai to Los Angeles",
-        "customer_order_ids": [
-            "CO-991",
-            "CO-992"
-        ],
-        "match_confidence": 1.0
+        "name": "PO-1001",
+        "docstatus": 1,
+        "supplier": "Shanghai Electronics Co.",
+        "custom_vessel_id": "Evergreen",
+        "custom_route": "Shanghai to Los Angeles",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-991", "CO-992"],
+        "items": [
+            {
+                "item_code": "ELEC-001",
+                "item_name": "High-End GPUs",
+                "qty": 500,
+                "rate": 1200.0
+            }
+        ]
     },
     {
-        "po_id": "PO-1002",
-        "sku": "ELEC-002",
-        "product_name": "Smartphones",
-        "quantity": 2000,
-        "unit_value_usd": 800.0,
-        "vessel_id": "Evergreen",
-        "route": "Shanghai to Los Angeles",
-        "customer_order_ids": [
-            "CO-993"
-        ],
-        "match_confidence": 1.0
+        "name": "PO-1002",
+        "docstatus": 1,
+        "supplier": "Shenzhen Mobile Ltd.",
+        "custom_vessel_id": "Evergreen",
+        "custom_route": "Shanghai to Los Angeles",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-993"],
+        "items": [
+            {
+                "item_code": "ELEC-002",
+                "item_name": "Smartphones",
+                "qty": 2000,
+                "rate": 800.0
+            }
+        ]
     },
     {
-        "po_id": "PO-1003",
-        "sku": "ACC-001",
-        "product_name": "Phone Cases",
-        "quantity": 10000,
-        "unit_value_usd": 15.0,
-        "vessel_id": "Evergreen",
-        "route": "Shanghai to Los Angeles",
-        "customer_order_ids": [],
-        "match_confidence": 1.0
+        "name": "PO-1003",
+        "docstatus": 1,
+        "supplier": "Pearl River Accessories",
+        "custom_vessel_id": "Evergreen",
+        "custom_route": "Shanghai to Los Angeles",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": [],
+        "items": [
+            {
+                "item_code": "ACC-001",
+                "item_name": "Phone Cases",
+                "qty": 10000,
+                "rate": 15.0
+            }
+        ]
     },
     {
-        "po_id": "PO-1004",
-        "sku": "ELEC-003",
-        "product_name": "Laptops",
-        "quantity": 300,
-        "unit_value_usd": 1500.0,
-        "vessel_id": "Evergreen-V2",
-        "route": "Shanghai to Los Angeles",
-        "customer_order_ids": [
-            "CO-994",
-            "CO-995"
-        ],
-        "match_confidence": 0.6
+        "name": "PO-1004",
+        "docstatus": 1,
+        "supplier": "Guangzhou Tech Supplies",
+        "custom_vessel_id": "Evergreen-V2",
+        "custom_route": "Shanghai to Los Angeles",
+        "custom_match_confidence": 0.6,
+        "custom_customer_order_ids": ["CO-994", "CO-995"],
+        "items": [
+            {
+                "item_code": "ELEC-003",
+                "item_name": "Laptops",
+                "qty": 300,
+                "rate": 1500.0
+            }
+        ]
     },
     {
-        "po_id": "PO-2001",
-        "sku": "FURN-001",
-        "product_name": "Office Chairs",
-        "quantity": 100,
-        "unit_value_usd": 150.0,
-        "vessel_id": "MSC-Maersk",
-        "route": "Rotterdam to New York",
-        "customer_order_ids": [
-            "CO-881"
-        ],
-        "match_confidence": 1.0
+        "name": "PO-2001",
+        "docstatus": 1,
+        "supplier": "Rotterdam Furniture NV",
+        "custom_vessel_id": "MSC-Maersk",
+        "custom_route": "Rotterdam to New York",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-881"],
+        "items": [
+            {
+                "item_code": "FURN-001",
+                "item_name": "Office Chairs",
+                "qty": 100,
+                "rate": 150.0
+            }
+        ]
     }
 ]

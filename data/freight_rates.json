@@ -1,26 +1,26 @@
 [
     {
+        "capacityProviderId": "FEDEX",
         "origin": "Shanghai",
         "destination": "Los Angeles",
-        "mode": "air",
-        "carrier": "FedEx",
-        "rate_per_kg_usd": 8.5,
-        "transit_days": 2
+        "mode": "AIR",
+        "totalCharge": { "amount": 8.5, "currency": "USD", "basis": "per_kg" },
+        "transitDays": 2
     },
     {
+        "capacityProviderId": "DHL",
         "origin": "Shanghai",
         "destination": "Los Angeles",
-        "mode": "air",
-        "carrier": "DHL",
-        "rate_per_kg_usd": 9.0,
-        "transit_days": 1
+        "mode": "AIR",
+        "totalCharge": { "amount": 9.0, "currency": "USD", "basis": "per_kg" },
+        "transitDays": 1
     },
     {
+        "capacityProviderId": "MAERSK_REROUTE",
         "origin": "Shanghai",
         "destination": "Los Angeles",
-        "mode": "alt_ocean",
-        "carrier": "Maersk (Reroute)",
-        "rate_per_kg_usd": 2.1,
-        "transit_days": 14
+        "mode": "OCN",
+        "totalCharge": { "amount": 2.1, "currency": "USD", "basis": "per_kg" },
+        "transitDays": 14
     }
 ]

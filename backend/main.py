@@ -64,13 +64,20 @@ async def startup():
         graph.checkpointer = saver
         print("LangGraph Postgres checkpointer configured.")
     except Exception as e:
-        print(f"Notice: Postgres database not available ({e}). Using in-memory state saver.")
+        print("Notice: Postgres database not available ({e}). Using in-memory state saver.")
+
+    # Start NOAA background polling task
+    from .services.noaa_poller import run_poller
+    app.state.poller_task = asyncio.create_task(run_poller())
+    print("NOAA maritime alert poller started.")
 
 
 @app.on_event("shutdown")
 async def shutdown():
     if hasattr(app.state, "pool"):
         await app.state.pool.close()
+    if hasattr(app.state, "poller_task"):
+        app.state.poller_task.cancel()
 
 @app.get("/")
 def read_root():
@@ -127,3 +134,68 @@ async def trigger_disruption(event_id: str = "EVT-9999"):
     import asyncio
     asyncio.create_task(run_graph_task())
     return {"status": "started", "thread_id": thread_id}
+
+
+# ── NOAA Polling endpoints ──────────────────────────────────────────────────
+
+@app.get("/events/polling/status", tags=["Events"])
+def get_polling_status():
+    """
+    Returns the current status of the NOAA background poller:
+    whether it's running, when it last polled, how many alerts have
+    been triggered, and how many unique events have been seen.
+    """
+    from .services.noaa_poller import get_status
+    return get_status()
+
+
+@app.post("/events/simulate", tags=["Events"])
+async def simulate_event(
+    route: str = "Shanghai to Los Angeles",
+    vessel_id: str = "Evergreen",
+    description: str = "Simulated maritime disruption for testing.",
+    event_type: str = "Gale Warning",
+):
+    """
+    Manually simulate a maritime disruption event and trigger the
+    LangGraph agent — useful for demos and frontend development without
+    waiting for a real NOAA alert.
+    """
+    event_id = f"SIM-{str(uuid.uuid4())[:8].upper()}"
+    thread_id = f"{event_id}-{str(uuid.uuid4())[:8]}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    from .db import crud
+    from .models.database import AsyncSessionLocal
+    try:
+        async with AsyncSessionLocal() as db:
+            await crud.save_thread(db, event_id, thread_id)
+    except Exception:
+        pass
+
+    initial_state = {
+        "event_id": event_id,
+        "raw_event": {
+            "vessel_id": vessel_id,
+            "source": "SIMULATION",
+            "route": route,
+            "description": description,
+            "event_type": event_type,
+        },
+    }
+
+    async def run_graph_task():
+        try:
+            await graph.ainvoke(initial_state, config=config)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+
+    asyncio.create_task(run_graph_task())
+    return {
+        "status": "started",
+        "event_id": event_id,
+        "thread_id": thread_id,
+        "route": route,
+        "vessel_id": vessel_id,
+    }

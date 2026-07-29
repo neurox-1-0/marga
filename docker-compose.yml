@@ -26,6 +26,10 @@ services:
       - ERP_API_URL=http://mock-erp:8001
       - FREIGHT_API_URL=http://mock-freight:8002
       - BOOKING_API_URL=http://mock-booking:8003
+      - ERP_API_KEY=mock_api_key
+      - ERP_API_SECRET=mock_api_secret
+      - P44_CLIENT_ID=mock_client_id
+      - P44_CLIENT_SECRET=mock_client_secret
     depends_on:
       postgres:
         condition: service_healthy

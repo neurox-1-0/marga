@@ -74,3 +74,10 @@ async def get_thread_id(db: AsyncSession, event_id: str) -> Optional[str]:
     if db_thread:
         return db_thread.thread_id
     return None
+
+async def get_all_event_ids(db: AsyncSession) -> List[str]:
+    """Return all event IDs from the EventThread table. Used by the NOAA poller
+    to pre-populate its dedup set so already-processed alerts are skipped after
+    a service restart."""
+    result = await db.execute(select(EventThreadDB.event_id))
+    return [row[0] for row in result.all()]
