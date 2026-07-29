@@ -1,8 +1,17 @@
+# Node / Next.js
+node_modules/
+.next/
+
+# Environment variables (never commit secrets)
+.env
+.env.*
+
 # Virtual environments
 marga_env/
 .venv/
 venv/
 env/
+.env/
 
 # Python cache
 __pycache__/
@@ -25,9 +34,6 @@ poetry.lock
 *.egg-info/
 dist/
 build/
-
-# Environment variables (never commit secrets)
-.env
 
 # IDE
 .vscode/

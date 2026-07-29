@@ -2,11 +2,8 @@ from typing import Any, Dict
 from datetime import datetime, timezone
 from ..state import AgentState
 from langgraph.types import interrupt
-from ...storage import cards_db
-from ...schemas.api import (
-    ApprovalCard, EventSchema, ExposureSchema,
-    CostAnalysisSchema, FreightOptionsSchema, FreightQuoteSchema, BestQuoteRef
-)
+import datetime
+from ..schemas.api import ApprovalCard, EventSchema, ExposureSchema, CostAnalysisSchema, FreightOptionsSchema, FreightQuoteSchema, BestQuoteRef
 
 def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     """
@@ -14,79 +11,49 @@ def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     so the dashboard can display it, then halts execution via LangGraph's
     interrupt() and waits for a human decision from the dashboard.
     """
-    event_id = state["event_id"]
-    raw = state.get("raw_event", {})
-
-    # ── Build EventSchema ──────────────────────────────────────────────────
-    event = EventSchema(
-        event_id=event_id,
-        detected_at=datetime.now(timezone.utc),
-        source=raw.get("source", "Unknown"),
-        vessel_id=raw.get("vessel_id", "Unknown"),
-        route=raw.get("route", "Unknown"),
-        description=raw.get("description", "No description provided."),
-    )
-
-    # ── Build ExposureSchema ───────────────────────────────────────────────
-    matched_pos = state.get("matched_pos") or []
-    exposure = ExposureSchema(
-        matched_pos=matched_pos,
-        total_inventory_value_usd=state.get("exposure_value") or 0.0,
-    )
-
-    # ── Build FreightOptionsSchema ─────────────────────────────────────────
-    raw_quotes = state.get("freight_quotes") or []
-    quotes = [
-        FreightQuoteSchema(
-            quote_id=q.get("quote_id", "Q-?"),
-            carrier=q.get("carrier", "Unknown"),
-            mode=q.get("mode", "Unknown"),
-            cost_usd=float(q.get("cost_usd", 0)),
-            transit_days=int(q.get("transit_days", 0)),
-        )
-        for q in raw_quotes
-    ]
-    freight_options = FreightOptionsSchema(quotes=quotes)
-
-    # ── Build CostAnalysisSchema ───────────────────────────────────────────
-    raw_cost = state.get("cost_analysis") or {}
-    best_quote_raw = raw_cost.get("best_reroute_option")
-    cost_analysis = CostAnalysisSchema(
-        stockout_cost_usd=float(raw_cost.get("stockout_cost_usd", 0)),
-        reroute_savings_usd=float(raw_cost.get("reroute_savings_usd", 0)),
-        recommendation=raw_cost.get("recommendation", "Insufficient data to recommend."),
-        best_reroute_option=BestQuoteRef(quote_id=best_quote_raw["quote_id"]) if best_quote_raw else None,
-    )
-
-    # ── Store card so dashboard can find it ───────────────────────────────
+    from ..routers.hitl import cards_db
+    
+    cost_analysis_dict = state.get("cost_analysis", {}) or {}
+    
+    # Handle the case where best_reroute_option is a string vs dict
+    best_option = cost_analysis_dict.get("best_reroute_option")
+    best_quote_ref = None
+    if best_option:
+        if isinstance(best_option, dict):
+            best_quote_ref = BestQuoteRef(quote_id=best_option.get("quote_id", ""))
+        else:
+            best_quote_ref = BestQuoteRef(quote_id=best_option)
+    
+    # Map state to ApprovalCard
     card = ApprovalCard(
-        event=event,
-        exposure=exposure,
-        cost_analysis=cost_analysis,
-        freight_options=freight_options,
-        status="pending",
+        event=EventSchema(
+            event_id=state.get("event_id", "Unknown"),
+            detected_at=datetime.datetime.now(),
+            source=state.get("raw_event", {}).get("source", "System"),
+            vessel_id=state.get("raw_event", {}).get("vessel_id", "Unknown"),
+            route=state.get("raw_event", {}).get("route", "Unknown"),
+            description=state.get("raw_event", {}).get("description", "Unknown")
+        ),
+        exposure=ExposureSchema(
+            matched_pos=state.get("matched_pos", []) or [],
+            total_inventory_value_usd=state.get("exposure_value", 0.0) or 0.0
+        ),
+        cost_analysis=CostAnalysisSchema(
+            stockout_cost_usd=cost_analysis_dict.get("stockout_cost_usd", 0.0) or 0.0,
+            reroute_savings_usd=cost_analysis_dict.get("reroute_savings_usd", 0.0) or 0.0,
+            recommendation=cost_analysis_dict.get("recommendation", ""),
+            best_reroute_option=best_quote_ref
+        ),
+        freight_options=FreightOptionsSchema(
+            quotes=[FreightQuoteSchema(**q) for q in (state.get("freight_quotes") or [])]
+        ),
+        status="pending"
     )
-    cards_db[event_id] = card
 
-    # ── Broadcast state update via WebSocket ──────────────────────────────
-    import asyncio
-    try:
-        from ...websockets.manager import manager
-        import json
-        asyncio.get_event_loop().run_until_complete(
-            manager.broadcast(json.dumps({
-                "type": "state_update",
-                "data": {
-                    "current_node": "hitl_gate",
-                    "tracking_id": event_id,
-                    "state_summary": f"Waiting for human approval. {len(matched_pos)} POs at risk.",
-                }
-            }))
-        )
-    except Exception:
-        pass  # WebSocket broadcast is non-critical
+    # Put it in the DB!
+    cards_db[state["event_id"]] = card
 
-    # ── Pause graph, wait for human via POST /cards/{id}/decision ─────────
+    # We use LangGraph's interrupt to pause the graph.
     decision_payload = interrupt("Waiting for human approval via dashboard.")
 
     return {

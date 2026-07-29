@@ -54,11 +54,11 @@ async def execute_node(state: AgentState) -> Dict[str, Any]:
                 confidence_score=0.5
             )
     else:
-        result = f"Decision was '{decision}'. No reroute booked."
         await broadcast_agent_thought(
             node="execute",
-            thought=result,
+            thought="Reroute rejected by human operator. No action taken.",
             confidence_score=1.0
         )
-
+        result = "Reroute rejected or no quote selected. No action taken."
+        
     return {"execution_result": result}
