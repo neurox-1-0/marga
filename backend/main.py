@@ -28,6 +28,16 @@ app.add_middleware(
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+import sys
+import asyncio
+
+# Fix Windows Psycopg event loop compatibility
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 @app.on_event("startup")
 async def startup():
     from .models.database import init_db, DATABASE_URL
@@ -35,17 +45,12 @@ async def startup():
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
     from .graph.builder import graph
 
-    print("Initializing database tables...")
+    print("Initializing database connection...")
     try:
-        await init_db()
+        await asyncio.wait_for(init_db(), timeout=3.0)
         print("Database tables initialized successfully.")
-    except Exception as e:
-        print(f"Failed to initialize database: {e}")
 
-    # Set up LangGraph Postgres checkpointer
-    print("Setting up LangGraph Postgres checkpointer...")
-    try:
-        # Create a connection pool for the checkpointer
+        # Set up LangGraph Postgres checkpointer
         psycopg_url = DATABASE_URL.replace("+asyncpg", "")
         app.state.pool = AsyncConnectionPool(
             conninfo=psycopg_url,
@@ -53,26 +58,36 @@ async def startup():
             kwargs={"autocommit": True},
             open=False
         )
-        await app.state.pool.open()
-        
-        # Checkpointer needs a running pool
+        await asyncio.wait_for(app.state.pool.open(), timeout=3.0)
         saver = AsyncPostgresSaver(app.state.pool)
-        await saver.setup() # creates checkpoint tables if missing
-        
-        # Override the graph's default MemorySaver
+        await asyncio.wait_for(saver.setup(), timeout=3.0)
         graph.checkpointer = saver
-        print("LangGraph checkpointer set up successfully.")
+        print("LangGraph Postgres checkpointer configured.")
     except Exception as e:
-        print(f"Failed to initialize checkpointer: {e}")
+        print(f"Notice: Postgres database not available ({e}). Using in-memory state saver.")
+
 
 @app.on_event("shutdown")
 async def shutdown():
     if hasattr(app.state, "pool"):
         await app.state.pool.close()
 
+@app.get("/")
+def read_root():
+    return {
+        "status": "online",
+        "message": "Marga Supply Chain Agent API is running.",
+        "documentation": "http://localhost:8000/docs",
+        "frontend_url": "http://localhost:3000",
+        "dashboard_url": "http://localhost:8000/dashboard"
+    }
+
 @app.get("/dashboard", include_in_schema=False)
 def serve_dashboard():
-    return FileResponse(str(STATIC_DIR / "dashboard.html"))
+    dashboard_file = STATIC_DIR / "dashboard.html"
+    if dashboard_file.exists():
+        return FileResponse(str(dashboard_file))
+    return {"message": "Dashboard HTML file not found."}
 
 app.include_router(ws_router)
 app.include_router(hitl_router)

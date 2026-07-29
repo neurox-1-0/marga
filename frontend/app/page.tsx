@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { connectAgentStream, triggerDemoDisruption, getCard } from "../lib/api";
+import { RouteMap } from "../components/RouteMap";
 
 export default function HomePage() {
   const [activeStep, setActiveStep] = useState(() => {
@@ -203,14 +204,19 @@ export default function HomePage() {
         </div>
 
         {/* Map & Routes Grid */}
-        <div className="grid grid-cols-3 gap-unit-lg h-[460px]">
-          {/* Top Routes Risk */}
-          <div className="card-surface rounded-xl flex flex-col col-span-3">
+        <div className="grid grid-cols-3 gap-unit-lg min-h-[440px]">
+          {/* Interactive Geographic Supply Chain Map (2 Columns) */}
+          <div className="col-span-2 h-[440px]">
+            <RouteMap activeStep={activeStep} />
+          </div>
+
+          {/* Top Routes Risk & Active Heat List (1 Column) */}
+          <div className="card-surface rounded-xl flex flex-col col-span-1 h-[440px]">
             <div className="p-unit-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low rounded-t-xl">
               <h2 className="text-sm font-semibold text-on-surface">Active Disruptions</h2>
               <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">Live Heat</span>
             </div>
-            <div className="p-unit-md space-y-unit-md flex-1">
+            <div className="p-unit-md space-y-unit-md flex-1 overflow-y-auto">
               {/* Route 1 */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px]">
@@ -265,6 +271,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
 
         {/* Bottom Row: Recent/Upcoming */}
         <div className="grid grid-cols-2 gap-unit-lg pb-unit-lg">
