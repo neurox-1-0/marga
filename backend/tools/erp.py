@@ -1,15 +1,54 @@
+"""
+backend/tools/erp.py
+
+LangChain tool that queries the real Mock ERP API (port 8001) for
+Purchase Orders affected by a disrupted vessel/route.
+Falls back to empty result on connection error so the graph doesn't crash
+if the mock service isn't running.
+"""
+
+import requests
 from langchain_core.tools import tool
-import json
 from typing import Dict, Any
 
+ERP_API_URL = "http://localhost:8001"
+
+
 @tool
-def query_erp(vessel_id: str) -> Dict[str, Any]:
-    """Queries the ERP system for Purchase Orders affected by a given vessel."""
-    # Mock ERP data for demo
-    if vessel_id == "V-559":
+def query_erp(vessel_id: str, route: str = "Suez") -> Dict[str, Any]:
+    """
+    Queries the ERP system for Purchase Orders affected by a given vessel and route.
+    Returns matched PO IDs and the total inventory value at risk.
+    """
+    try:
+        resp = requests.get(
+            f"{ERP_API_URL}/exposure",
+            params={"vessel_id": vessel_id, "route": route},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Extract just the PO IDs for the agent state (keeps state lightweight)
+        po_ids = [po["po_id"] for po in data.get("matched_pos", [])]
+
         return {
             "status": "success",
-            "matched_pos": ["PO-001", "PO-002"],
-            "total_inventory_value_usd": 1500000.50
+            "matched_pos": po_ids,
+            "total_inventory_value_usd": data.get("total_inventory_value_usd", 0.0),
+            "data_quality_note": data.get("data_quality_note"),
         }
-    return {"status": "not_found", "matched_pos": [], "total_inventory_value_usd": 0.0}
+    except requests.exceptions.ConnectionError:
+        return {
+            "status": "error",
+            "matched_pos": [],
+            "total_inventory_value_usd": 0.0,
+            "error": "ERP service unavailable (is mock_erp_api running on port 8001?)",
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "matched_pos": [],
+            "total_inventory_value_usd": 0.0,
+            "error": str(e),
+        }

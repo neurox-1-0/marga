@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
-import sys
-from pathlib import Path
+from backend.schemas.api import ApprovalCard
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
-from shared.schemas import ApprovalCard
 
 class BaseChannel(ABC):
     @abstractmethod

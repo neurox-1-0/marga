@@ -3,12 +3,10 @@ from pydantic import BaseModel
 from typing import List
 from ..graph.builder import graph
 from ..schemas.api import ApprovalCard, ApprovalDecision
+from ..storage import cards_db
 import uuid
 
 router = APIRouter()
-
-# In-memory storage for cards just like the prototype for now
-cards_db = {}
 
 @router.get("/cards/pending", response_model=List[ApprovalCard])
 def list_pending_cards():
