@@ -2,11 +2,8 @@ import os
 import smtplib
 from email.message import EmailMessage
 from .base import BaseChannel
-import sys
-from pathlib import Path
+from backend.schemas.api import ApprovalCard
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
-from shared.schemas import ApprovalCard
 
 class EmailChannel(BaseChannel):
     def notify(self, card: ApprovalCard, dashboard_url: str):
@@ -26,15 +23,13 @@ class EmailChannel(BaseChannel):
         content = (
             f"Disruption Alert: {card.event.source}\n"
             f"Vessel: {card.event.vessel_id} | Route: {card.event.route}\n"
-            f"Expected Delay: {card.event.delay_days_estimate} days\n"
             f"Impact: {len(card.exposure.matched_pos)} POs worth ${card.exposure.total_inventory_value_usd:,.2f}\n"
             f"Recommendation: {card.cost_analysis.recommendation}\n\n"
-            f"Please review and approve the action on the dashboard:\n{dashboard_url}\n"
+            f"Please review and approve on the dashboard:\n{dashboard_url}\n"
         )
         msg.set_content(content)
 
         try:
-            # Assuming Gmail for demo, would normally be configurable
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                 smtp.login(smtp_user, smtp_pass)
                 smtp.send_message(msg)

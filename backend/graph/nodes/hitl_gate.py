@@ -1,4 +1,5 @@
 from typing import Any, Dict
+from datetime import datetime, timezone
 from ..state import AgentState
 from langgraph.types import interrupt
 import datetime
@@ -6,7 +7,9 @@ from ..schemas.api import ApprovalCard, EventSchema, ExposureSchema, CostAnalysi
 
 def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     """
-    Halts execution and waits for human approval from the dashboard.
+    Builds an ApprovalCard from the current agent state, stores it in cards_db
+    so the dashboard can display it, then halts execution via LangGraph's
+    interrupt() and waits for a human decision from the dashboard.
     """
     from ..routers.hitl import cards_db
     
@@ -52,10 +55,9 @@ def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
 
     # We use LangGraph's interrupt to pause the graph.
     decision_payload = interrupt("Waiting for human approval via dashboard.")
-    
-    # When resumed, decision_payload will contain the chosen action
+
     return {
         "approval_decision": decision_payload.get("decision"),
         "chosen_quote_id": decision_payload.get("chosen_quote_id"),
-        "manager_note": decision_payload.get("manager_note")
+        "manager_note": decision_payload.get("manager_note"),
     }

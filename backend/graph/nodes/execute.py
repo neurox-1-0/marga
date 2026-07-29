@@ -1,24 +1,58 @@
 from typing import Any, Dict
 from ..state import AgentState
+import requests
+
+BOOKING_API_URL = "http://localhost:8003"
 
 async def execute_node(state: AgentState) -> Dict[str, Any]:
     """
-    Executes the approved reroute using the mock booking client.
+    Executes the approved reroute by calling the booking API.
+    If rejected, logs and exits without booking.
     """
     from ...websockets.manager import broadcast_agent_thought
-    
+
     decision = state.get("approval_decision")
     quote_id = state.get("chosen_quote_id")
-    
+    event_id = state.get("event_id")
+    matched_pos = state.get("matched_pos", [])
+
     if decision == "approved" and quote_id:
         await broadcast_agent_thought(
             node="execute",
-            thought=f"Executing reroute using quote {quote_id}. Contacting carrier...",
+            thought=f"Approval received. Booking reroute via quote {quote_id} for {len(matched_pos)} POs...",
             confidence_score=0.99
         )
-        
-        # Here we would call the booking client.
-        result = "Successfully booked reroute."
+
+        # Call the real booking API
+        try:
+            payload = {
+                "event_id": event_id,
+                "po_ids": matched_pos,
+                "quote_id": quote_id,
+                "decision": {
+                    "event_id": event_id,
+                    "decision": "approved",
+                    "chosen_quote_id": quote_id,
+                    "manager_note": state.get("manager_note", "Approved via Dashboard"),
+                }
+            }
+            resp = requests.post(f"{BOOKING_API_URL}/book", json=payload, timeout=10)
+            resp.raise_for_status()
+            booking = resp.json()
+            result = f"Booking confirmed. Reference: {booking.get('booking_reference', 'N/A')}"
+
+            await broadcast_agent_thought(
+                node="execute",
+                thought=result,
+                confidence_score=1.0
+            )
+        except requests.exceptions.RequestException as e:
+            result = f"Booking API call failed: {e}. Manual booking may be required."
+            await broadcast_agent_thought(
+                node="execute",
+                thought=result,
+                confidence_score=0.5
+            )
     else:
         await broadcast_agent_thought(
             node="execute",

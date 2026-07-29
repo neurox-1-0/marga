@@ -1,6 +1,15 @@
+"""
+backend/schemas/mock_schemas.py
+
+Pydantic models used by the mock HTTP services (ERP, Freight, Booking).
+These are richer than the lightweight schemas in api.py — they carry
+full PurchaseOrder detail needed for cost calculations.
+"""
+
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+
 
 class DisruptionEvent(BaseModel):
     event_id: str
@@ -11,6 +20,7 @@ class DisruptionEvent(BaseModel):
     delay_days_estimate: int
     confidence: float
     detected_at: datetime
+
 
 class PurchaseOrder(BaseModel):
     po_id: str
@@ -23,10 +33,12 @@ class PurchaseOrder(BaseModel):
     customer_order_ids: List[str]
     match_confidence: float
 
+
 class ERPExposureResponse(BaseModel):
     matched_pos: List[PurchaseOrder]
     total_inventory_value_usd: float
     data_quality_note: Optional[str] = None
+
 
 class FreightQuote(BaseModel):
     quote_id: str
@@ -35,10 +47,12 @@ class FreightQuote(BaseModel):
     cost_usd: float
     transit_days: int
 
+
 class FreightQuoteResponse(BaseModel):
     origin: str
     destination: str
     quotes: List[FreightQuote]
+
 
 class CostComparison(BaseModel):
     stockout_cost_usd: float
@@ -47,27 +61,26 @@ class CostComparison(BaseModel):
     reroute_savings_usd: float
     recommendation: str
 
-class ApprovalCard(BaseModel):
-    event: DisruptionEvent
-    exposure: ERPExposureResponse
-    freight_options: FreightQuoteResponse
-    cost_analysis: CostComparison
-    status: str = "pending"  # pending, approved, rejected, redirected
-    chosen_quote_id: Optional[str] = None
-
-class ApprovalDecision(BaseModel):
-    event_id: str
-    decision: str  # approved, rejected, redirected
-    chosen_quote_id: Optional[str] = None
-    manager_note: Optional[str] = None
 
 class BookingRequest(BaseModel):
     event_id: str
     po_ids: List[str]
     quote_id: str
-    decision: ApprovalDecision  # structurally enforcing decision inclusion
+    decision: "ApprovalDecision"
+
+
+class ApprovalDecision(BaseModel):
+    event_id: str
+    decision: str
+    chosen_quote_id: Optional[str] = None
+    manager_note: Optional[str] = None
+
 
 class BookingResponse(BaseModel):
     booking_reference: str
     status: str
     message: str
+
+
+# Resolve forward reference
+BookingRequest.model_rebuild()
