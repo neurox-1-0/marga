@@ -1,8 +1,9 @@
 from typing import Any, Dict
 from ..state import AgentState
 import requests
+import os
 
-BOOKING_API_URL = "http://localhost:8003"
+BOOKING_API_URL = os.getenv("BOOKING_API_URL", "http://localhost:8003")
 
 async def execute_node(state: AgentState) -> Dict[str, Any]:
     """

@@ -7,10 +7,11 @@ Falls back to an empty list on connection error.
 """
 
 import requests
+import os
 from langchain_core.tools import tool
 from typing import Dict, Any, List
 
-FREIGHT_API_URL = "http://localhost:8002"
+FREIGHT_API_URL = os.getenv("FREIGHT_API_URL", "http://localhost:8002")
 
 
 @tool

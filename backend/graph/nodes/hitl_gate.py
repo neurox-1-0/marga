@@ -2,16 +2,16 @@ from typing import Any, Dict
 import datetime
 from ..state import AgentState
 from langgraph.types import interrupt
-from ..schemas.api import ApprovalCard, EventSchema, ExposureSchema, CostAnalysisSchema, FreightOptionsSchema, FreightQuoteSchema, BestQuoteRef
+from ...schemas.api import ApprovalCard, EventSchema, ExposureSchema, CostAnalysisSchema, FreightOptionsSchema, FreightQuoteSchema, BestQuoteRef
+from ...models.database import AsyncSessionLocal
+from ...db import crud
 
-def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
+async def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     """
-    Builds an ApprovalCard from the current agent state, stores it in cards_db
+    Builds an ApprovalCard from the current agent state, stores it in PostgreSQL
     so the dashboard can display it, then halts execution via LangGraph's
     interrupt() and waits for a human decision from the dashboard.
     """
-    from ..routers.hitl import cards_db
-    
     cost_analysis_dict = state.get("cost_analysis", {}) or {}
     
     # Handle the case where best_reroute_option is a string vs dict
@@ -50,7 +50,8 @@ def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     )
 
     # Put it in the DB!
-    cards_db[state["event_id"]] = card
+    async with AsyncSessionLocal() as db:
+        await crud.save_card(db, card)
 
     # We use LangGraph's interrupt to pause the graph.
     decision_payload = interrupt("Waiting for human approval via dashboard.")

@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: marga
+    ports:
+      - "54320:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marga"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/marga
+      - ERP_API_URL=http://mock-erp:8001
+      - FREIGHT_API_URL=http://mock-freight:8002
+      - BOOKING_API_URL=http://mock-booking:8003
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  mock-erp:
+    build: .
+    command: ["uvicorn", "backend.mocks.erp_api:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  mock-freight:
+    build: .
+    command: ["uvicorn", "backend.mocks.freight_api:app", "--host", "0.0.0.0", "--port", "8002"]
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  mock-booking:
+    build: .
+    command: ["uvicorn", "backend.mocks.booking_api:app", "--host", "0.0.0.0", "--port", "8003"]
+    ports:
+      - "8003:8003"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8004
+
+volumes:
+  postgres_data:

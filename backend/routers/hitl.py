@@ -1,49 +1,61 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from ..graph.builder import graph
 from ..schemas.api import ApprovalCard, ApprovalDecision
-import uuid
+from ..models.database import get_db
+from ..db import crud
 
 router = APIRouter()
 
-# In-memory storage for cards just like the prototype for now
-cards_db = {}
-thread_db = {}
-
 @router.get("/cards/pending", response_model=List[ApprovalCard])
-def list_pending_cards():
-    return [card for card in cards_db.values() if card.status == "pending"]
+async def list_pending_cards(db: AsyncSession = Depends(get_db)):
+    return await crud.get_pending_cards(db)
 
 @router.get("/cards/{event_id}", response_model=ApprovalCard)
-def get_card(event_id: str):
-    if event_id not in cards_db:
+async def get_card(event_id: str, db: AsyncSession = Depends(get_db)):
+    card = await crud.get_card(db, event_id)
+    if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-    return cards_db[event_id]
+    return card
 
 @router.post("/cards/{event_id}/decision")
-async def record_decision(event_id: str, decision: ApprovalDecision, background_tasks: BackgroundTasks):
-    if event_id not in cards_db:
-        # Mock finding the card
-        pass
+async def record_decision(
+    event_id: str,
+    decision: ApprovalDecision,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    card = await crud.get_card(db, event_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
 
-    # Update state
-    if event_id in cards_db:
-        cards_db[event_id].status = decision.decision
-        cards_db[event_id].chosen_quote_id = decision.chosen_quote_id
+    # Update state in DB
+    await crud.update_card_status(db, event_id, decision.decision, decision.chosen_quote_id)
 
     # Resume the LangGraph using Command
     from langgraph.types import Command
     
     # In a real app we'd load the thread_id associated with the event
-    thread_id = thread_db.get(event_id, event_id)
+    thread_id = await crud.get_thread_id(db, event_id) or event_id
     config = {"configurable": {"thread_id": thread_id}}
     
-    def resume_graph():
-        graph.invoke(
-            Command(resume={"decision": decision.decision, "chosen_quote_id": decision.chosen_quote_id, "manager_note": decision.manager_note}),
-            config=config
-        )
+    async def resume_graph():
+        try:
+            print(f"Resuming graph for thread_id {thread_id}...")
+            await graph.ainvoke(
+                Command(resume={
+                    "decision": decision.decision,
+                    "chosen_quote_id": decision.chosen_quote_id,
+                    "manager_note": decision.manager_note
+                }),
+                config=config
+            )
+            print(f"Graph resumed and completed successfully for {thread_id}.")
+        except Exception as e:
+            print(f"CRITICAL ERROR IN GRAPH RESUMPTION: {e}")
+            import traceback
+            traceback.print_exc()
         
     background_tasks.add_task(resume_graph)
 

@@ -8,10 +8,11 @@ if the mock service isn't running.
 """
 
 import requests
+import os
 from langchain_core.tools import tool
 from typing import Dict, Any
 
-ERP_API_URL = "http://localhost:8001"
+ERP_API_URL = os.getenv("ERP_API_URL", "http://localhost:8001")
 
 
 @tool
