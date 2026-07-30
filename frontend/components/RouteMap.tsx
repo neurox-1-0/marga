@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ArcLayer, ScatterplotLayer, TextLayer, BitmapLayer, PathLayer } from '@deck.gl/layers';
 import { TileLayer } from '@deck.gl/geo-layers';
-import type { PickingInfo } from '@deck.gl/core';
+import { _GlobeView, type PickingInfo } from '@deck.gl/core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,7 +61,7 @@ const PORTS: Port[] = [
     id: 'port-lax',
     name: 'Port of Los Angeles',
     code: 'USLAX',
-    coordinates: [241.74, 33.73], // 360 - 118.26 to place it east of Asia
+    coordinates: [241.74, 33.73], // >180 longitude wraps correctly on GlobeView
     type: 'destination',
     status: 'normal',
     details: 'Destination Hub · Destination for PO-101 & PO-102',
@@ -90,7 +90,7 @@ const ARCS: ShippingArc[] = [
   {
     id: 'sea-route',
     from: { coordinates: [121.47, 31.23] },
-    to: { coordinates: [241.74, 33.73] }, // LA is -118.26, mapped to 360-118.26 to avoid wrap
+    to: { coordinates: [241.74, 33.73] }, // Strictly increasing longitudes
     path: [
       [121.47, 31.23], // Shanghai
       [123.5, 29.5],   // East China Sea
@@ -172,10 +172,10 @@ const TILE_URL = 'https://cartodb-basemaps-a.global.ssl.fastly.net/dark_all/{z}/
 // ---------------------------------------------------------------------------
 
 const INITIAL_VIEW_STATE = {
-  longitude: 10,
-  latitude: 30,
-  zoom: 2.1,
-  pitch: 0,
+  longitude: 170, // Centered on the Pacific
+  latitude: 25,
+  zoom: 1.2,
+  pitch: 20,
   bearing: 0,
 };
 
@@ -393,10 +393,11 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
       {/* Deck.gl Map Canvas */}
       <div className="relative flex-1 min-h-0">
         <DeckGL
+          views={new _GlobeView()}
           initialViewState={INITIAL_VIEW_STATE}
           controller={true}
           layers={layers}
-          style={{ position: 'absolute', inset: '0' }}
+          style={{ position: 'absolute', inset: '0', background: '#090a0c' }}
         >
         </DeckGL>
 
@@ -461,33 +462,9 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
           </div>
         </div>
 
-        {/* Disruption Pulse Beacon (rendered as DOM overlay at approximate screen position) */}
-        <DisruptionBeacon isRerouted={isRerouted} />
       </div>
     </div>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Small sub-component: animated beacon overlay (decorative, positioned center-right)
-// ---------------------------------------------------------------------------
-
-function DisruptionBeacon({ isRerouted }: { isRerouted: boolean }) {
-  // Approximate screen position for the East China Sea disruption point —
-  // we can't get exact pixel from Deck.gl without project(), so we use a
-  // visual hint near the right side of the map
-  return (
-    <div
-      className="absolute pointer-events-none z-20"
-      style={{ right: '18%', top: '38%' }}
-    >
-      <span
-        className={`absolute inline-flex h-7 w-7 rounded-full opacity-60 -translate-x-1/2 -translate-y-1/2 ${
-          isRerouted ? 'bg-emerald-400 animate-ping' : 'bg-red-500 animate-ping'
-        }`}
-      />
-    </div>
-  );
-}
 
 export default RouteMap;
