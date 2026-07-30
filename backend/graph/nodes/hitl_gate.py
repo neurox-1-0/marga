@@ -12,6 +12,7 @@ async def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     so the dashboard can display it, then halts execution via LangGraph's
     interrupt() and waits for a human decision from the dashboard.
     """
+
     cost_analysis_dict = state.get("cost_analysis", {}) or {}
     
     # Handle the case where best_reroute_option is a string vs dict
@@ -49,9 +50,11 @@ async def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
         status="pending"
     )
 
-    # Put it in the DB!
+    # Put it in the DB only if it hasn't been approved/rejected yet!
     async with AsyncSessionLocal() as db:
-        await crud.save_card(db, card)
+        existing = await crud.get_card(db, card.event.event_id)
+        if not existing or existing.status == "pending":
+            await crud.save_card(db, card)
 
     # We use LangGraph's interrupt to pause the graph.
     decision_payload = interrupt("Waiting for human approval via dashboard.")

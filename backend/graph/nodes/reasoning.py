@@ -90,6 +90,7 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
                 thought="No freight quotes returned. Check that the mock freight service is running on port 8002.",
                 confidence_score=0.3,
             )
+            updates["freight_quotes"] = [{"error": "No quotes available"}]
         else:
             updates["freight_quotes"] = valid_quotes
             await broadcast_agent_thought(
@@ -103,6 +104,7 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
     elif not state.get("cost_analysis"):
         exposure_value = state.get("exposure_value", 0.0)
         quotes = state.get("freight_quotes", [])
+        valid_quotes = [q for q in quotes if "error" not in q]
 
         # Use 10-day delay estimate — in a real system this would come from monitoring
         cost_result = calculate_stockout_cost.invoke({
@@ -111,7 +113,7 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
         })
 
         # Pick the cheapest valid quote as the recommended option
-        best_quote = min(quotes, key=lambda q: q.get("cost_usd", float("inf"))) if quotes else None
+        best_quote = min(valid_quotes, key=lambda q: q.get("cost_usd", float("inf"))) if valid_quotes else None
 
         stockout_cost = cost_result.get("stockout_cost_usd", 0.0)
         best_cost = best_quote.get("cost_usd", 0.0) if best_quote else 0.0

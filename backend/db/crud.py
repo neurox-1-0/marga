@@ -30,7 +30,7 @@ async def save_card(db: AsyncSession, card: ApprovalCard) -> None:
     result = await db.execute(select(ApprovalCardDB).where(ApprovalCardDB.event_id == event_id))
     db_card = result.scalars().first()
     
-    card_dict = card.model_dump()
+    card_dict = card.model_dump(mode="json")
     
     if db_card:
         db_card.status = card.status
