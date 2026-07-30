@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ArcLayer, ScatterplotLayer, TextLayer, BitmapLayer, PathLayer } from '@deck.gl/layers';
 import { TileLayer } from '@deck.gl/geo-layers';
@@ -30,7 +30,7 @@ interface ShippingArc {
   from: { coordinates: [number, number] };
   to: { coordinates: [number, number] };
   path?: [number, number][];
-  type: 'sea' | 'air' | 'secondary';
+  type: 'sea' | 'air' | 'sea-reroute' | 'secondary';
   label: string;
 }
 
@@ -110,6 +110,29 @@ const ARCS: ShippingArc[] = [
     to: { coordinates: [241.74, 33.73] },
     type: 'air',
     label: 'AI Air Reroute (Active)',
+  },
+  {
+    id: 'sea-reroute',
+    from: { coordinates: [121.47, 31.23] },
+    to: { coordinates: [241.74, 33.73] },
+    path: [
+      [121.47, 31.23],   // Shanghai
+      [120.0, 25.0],     // Off west Taiwan coast
+      [121.5, 21.0],     // Bashi Channel (south of Taiwan)
+      [124.0, 18.0],     // Luzon Strait
+      [130.0, 14.0],     // Philippine Sea
+      [140.0, 12.0],     // Western Pacific (Palau)
+      [155.0, 12.0],     // Caroline Islands
+      [170.0, 15.0],     // Marshall Islands
+      [180.0, 18.0],     // International Date Line
+      [195.0, 22.0],     // Central Pacific
+      [210.0, 26.0],     // Eastern Pacific
+      [225.0, 30.0],     // Off California coast
+      [235.0, 32.5],     // Approaching LA
+      [241.74, 33.73],   // LA
+    ],
+    type: 'sea-reroute',
+    label: 'Alt. Sea Route (Southern Pacific Bypass)',
   },
   {
     id: 'asia-europe',
@@ -192,17 +215,54 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
     port: Port;
   } | null>(null);
 
+  // Live data from backend — falls back to hardcoded if backend is offline
+  const [livePorts, setLivePorts] = useState<Port[] | null>(null);
+  const [liveArcs, setLiveArcs] = useState<ShippingArc[] | null>(null);
+  const [dataSource, setDataSource] = useState<'live' | 'demo'>('demo');
+
+  useEffect(() => {
+    const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000';
+    fetch(`${BACKEND}/map/routes`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ports?.length) {
+          // Merge live ports with hardcoded disruption marker so it always shows
+          const disruption = PORTS.find((p) => p.type === 'disruption');
+          setLivePorts(disruption ? [...data.ports, disruption] : data.ports);
+        }
+        if (data.arcs?.length) {
+          // Merge live sea arcs with the existing reroute + secondary arcs
+          const rerouteArcs = ARCS.filter((a) => a.type === 'air' || a.type === 'sea-reroute');
+          const seaArcs: ShippingArc[] = data.arcs.map((a: ShippingArc) => ({
+            ...a,
+            type: 'sea' as const,
+          }));
+          setLiveArcs([...seaArcs, ...rerouteArcs]);
+        }
+        setDataSource('live');
+      })
+      .catch(() => {
+        // Backend offline — silently fall back to demo data
+        setDataSource('demo');
+      });
+  }, []);
+
+  // Use live data if available, otherwise use hardcoded demo data
+  const basePorts = livePorts ?? PORTS;
+  const baseArcs  = liveArcs  ?? ARCS;
+
   const isRerouted = activeStep >= 6;
 
   // Reactively override disruption status based on activeStep
   const ports = useMemo<Port[]>(
     () =>
-      PORTS.map((p) =>
+      basePorts.map((p) =>
         p.id === 'disruption-shanghai'
           ? { ...p, status: isRerouted ? 'rerouted' : 'disrupted' }
           : p
       ),
-    [isRerouted]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isRerouted, basePorts]
   );
 
   const selectedPort = ports.find((p) => p.id === selectedId) ?? ports[1];
@@ -212,12 +272,13 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
   // -------------------------------------------------------------------------
 
   const visibleArcs = useMemo(() => {
-    return ARCS.filter((arc) => {
+    return baseArcs.filter((arc) => {
       if (activeLayer === 'disrupted') return arc.type === 'sea';
-      if (activeLayer === 'reroute') return arc.type === 'air';
+      if (activeLayer === 'reroute') return arc.type === 'air' || arc.type === 'sea-reroute';
       return true; // 'all'
     });
-  }, [activeLayer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLayer, baseArcs]);
 
   // -------------------------------------------------------------------------
   // Deck.gl Layers
@@ -264,23 +325,34 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
       wrapLongitude: true,
     });
 
-    // --- Path Layer (Sea routes) ---
+    // --- Path Layer (Sea routes — blocked, reroute, and secondary) ---
     const pathLayer = new PathLayer({
       id: 'shipping-paths',
       data: visibleArcs.filter(d => d.path),
       getPath: (d: ShippingArc) => d.path as [number, number][],
       getColor: (d: ShippingArc): [number, number, number, number] => {
         if (d.type === 'sea') return isRerouted ? [51, 65, 85, 80] : [239, 68, 68, 200];
+        if (d.type === 'sea-reroute') return [251, 191, 36, 210]; // amber-400 for alt sea route
         return [51, 65, 85, 120];
       },
-      getWidth: (d: ShippingArc) => (d.type === 'sea' ? 2.5 : 1.5),
-      getDashArray: (d: ShippingArc): [number, number] =>
-        d.type === 'sea' ? [6, 4] : [4, 4],
+      getWidth: (d: ShippingArc) => {
+        if (d.type === 'sea') return 2.5;
+        if (d.type === 'sea-reroute') return 2.5;
+        return 1.5;
+      },
+      getDashArray: (d: ShippingArc): [number, number] => {
+        if (d.type === 'sea') return [6, 4];
+        if (d.type === 'sea-reroute') return [10, 5];
+        return [4, 4];
+      },
       dashJustified: true,
       extensions: [],
       widthMinPixels: 2,
       pickable: false,
       wrapLongitude: true,
+      updateTriggers: {
+        getColor: [isRerouted],
+      },
     });
 
     // --- Scatter (Port Pins) ---
@@ -366,6 +438,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
             <span className="w-1.5 h-1.5 rounded-full bg-error animate-ping" />
             Live Telemetry
           </span>
+          {/* Data source indicator */}
+          <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${
+            dataSource === 'live'
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              : 'bg-slate-700/50 text-slate-400 border border-slate-600/30'
+          }`}>
+            {dataSource === 'live' ? '⬤ Live Data' : '⬤ Demo Mode'}
+          </span>
         </div>
 
         {/* Layer Filters */}
@@ -431,8 +511,13 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
             </div>
             <p className="text-[11px] text-slate-300 leading-normal">{selectedPort.details}</p>
             {isRerouted && selectedPort.id === 'disruption-shanghai' && (
-              <div className="text-[10px] text-emerald-400 font-semibold pt-0.5 flex items-center gap-1">
-                ✈️ Rerouted via Apex Air Freight (ETA 2 Days)
+              <div className="space-y-1 pt-0.5">
+                <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                  ✈️ Air Reroute: Apex Air Freight (ETA 2 Days)
+                </div>
+                <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                  🚢 Sea Reroute: Southern Pacific Bypass (ETA 18 Days)
+                </div>
               </div>
             )}
           </div>
@@ -447,6 +532,10 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
           <div className="flex items-center gap-2">
             <span className="w-4 h-0.5 bg-cyan-400 inline-block rounded" />
             <span>AI Air Reroute</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-0.5 bg-amber-400 inline-block rounded" />
+            <span>Alt. Sea Reroute</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" />
