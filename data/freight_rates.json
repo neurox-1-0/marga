@@ -22,5 +22,21 @@
         "mode": "OCN",
         "totalCharge": { "amount": 2.1, "currency": "USD", "basis": "per_kg" },
         "transitDays": 14
+    },
+    {
+        "capacityProviderId": "FEDEX",
+        "origin": "Rotterdam",
+        "destination": "New York",
+        "mode": "AIR",
+        "totalCharge": { "amount": 6.5, "currency": "USD", "basis": "per_kg" },
+        "transitDays": 1
+    },
+    {
+        "capacityProviderId": "HAPAG_LLOYD",
+        "origin": "Rotterdam",
+        "destination": "New York",
+        "mode": "OCN",
+        "totalCharge": { "amount": 1.2, "currency": "USD", "basis": "per_kg" },
+        "transitDays": 10
     }
 ]
