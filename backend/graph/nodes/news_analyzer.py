@@ -47,7 +47,7 @@ _structured_llm = None
 def _get_structured_llm():
     global _analysis_llm, _structured_llm
     if _structured_llm is None:
-        _analysis_llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0.1)
+        _analysis_llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.1)
         _structured_llm = _analysis_llm.with_structured_output(NewsAnalysisResult)
     return _structured_llm
 
@@ -135,6 +135,14 @@ Analyze these articles and identify any supply chain disruptions."""
         return result
     except Exception as e:
         logger.error(f"[News Analyzer] Gemini analysis failed: {e}")
+        from ...websockets.manager import broadcast_api_call
+        await broadcast_api_call(
+            service="Google Gemini API",
+            endpoint="/models/gemini-3.6-flash:generateContent (News Analyzer)",
+            request_payload={"prompt": "Analyze these articles and identify any supply chain disruptions."},
+            response_payload={"error": str(e)},
+            status=429 if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e) else 500
+        )
         return NewsAnalysisResult(
             disruptions=[],
             summary=f"Analysis failed: {str(e)}"

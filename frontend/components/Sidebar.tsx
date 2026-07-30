@@ -21,6 +21,10 @@ export default function Sidebar() {
           <span className="material-symbols-outlined text-[20px]">dashboard</span>
           <span className="text-sm">Dashboard</span>
         </Link>
+        <Link href="/simulation" className={`flex items-center space-x-unit-md px-unit-md py-unit-sm rounded-lg group transition-colors ${pathname.startsWith('/simulation') ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+          <span className="material-symbols-outlined text-[20px]">science</span>
+          <span className="text-sm">Simulation Engine</span>
+        </Link>
         <Link href="/alerts" className={`flex items-center space-x-unit-md px-unit-md py-unit-sm rounded-lg group transition-colors ${pathname.startsWith('/alerts') ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
           <span className="material-symbols-outlined text-[20px]">inventory_2</span>
           <span className="text-sm">Active Alerts</span>

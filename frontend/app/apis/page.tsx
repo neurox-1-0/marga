@@ -39,6 +39,13 @@ export default function APIsPage() {
 
   const apis = [
     {
+      name: "Google Gemini API",
+      port: 443,
+      description: "The core reasoning engine powering the Marga AI Agent. It uses Gemini 3.6 Flash for decision making, tool selection, and text analysis.",
+      icon: "psychology",
+      docsUrl: "https://ai.google.dev/docs"
+    },
+    {
       name: "Marga Agent Backend",
       port: 8004,
       description: "The core LangGraph supply chain AI agent that orchestrates reasoning, NOAA polling, and HITL decision-making.",

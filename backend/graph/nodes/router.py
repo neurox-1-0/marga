@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 import os
 
 # We require an LLM for dynamic routing to satisfy NeuroX constraint #1
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0)
 
 class RouterDecision(BaseModel):
     next_node: str = Field(description="The name of the next node to route to: 'reasoning_node', 'hitl_gate', 'execute', or 'end'.")
@@ -73,7 +73,18 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
             
         decision = RouterDecision(next_node=next_node, rationale=rationale, confidence=1.0)
     else:
-        decision: RouterDecision = await router_llm.ainvoke([HumanMessage(content=prompt)])
+        try:
+            decision: RouterDecision = await router_llm.ainvoke([HumanMessage(content=prompt)])
+        except Exception as e:
+            from ...websockets.manager import broadcast_api_call
+            await broadcast_api_call(
+                service="Google Gemini API",
+                endpoint="/models/gemini-3.6-flash:generateContent (Router)",
+                request_payload={"prompt": "Determine next routing node..."},
+                response_payload={"error": str(e)},
+                status=429 if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e) else 500
+            )
+            raise e
     # --------------------------------------
     
     # Broadcast thought

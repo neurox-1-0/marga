@@ -129,6 +129,25 @@ export async function triggerDemoDisruption(eventId: string): Promise<{ status: 
   return response.json();
 }
 
+export async function simulateSandbox(payload: {
+  event_headline: string;
+  event_description: string;
+  severity: string;
+  exposure_value_usd: number;
+  matched_pos: string[];
+  freight_quotes: any[];
+}): Promise<{ status: string; event_id: string; thread_id: string }> {
+  const response = await fetch(`${API_BASE}/simulate-sandbox`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error('Failed to start sandbox simulation');
+  }
+  return response.json();
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function connectAgentStream(onMessage: (data: any) => void): () => void {
   let ws: WebSocket | null = null;
