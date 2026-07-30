@@ -13,7 +13,7 @@ from ...tools.erp import query_erp
 from ...tools.freight import get_freight_quotes
 from ...tools.cost_engine import calculate_stockout_cost
 
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", temperature=0)
 tools = [query_erp, get_freight_quotes, calculate_stockout_cost]
 llm_with_tools = llm.bind_tools(tools)
 
