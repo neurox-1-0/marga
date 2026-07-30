@@ -159,18 +159,59 @@ export default function AlertDetailsPage() {
         );
       }
 
+      // Sort quotes: Recommended first, then by cheapest
+      const sortedQuotes = [...card.freight_options.quotes].sort((a, b) => {
+        const isRecA = a.quote_id === card.cost_analysis.best_reroute_option?.quote_id;
+        const isRecB = b.quote_id === card.cost_analysis.best_reroute_option?.quote_id;
+        if (isRecA) return -1;
+        if (isRecB) return 1;
+        return a.cost_usd - b.cost_usd;
+      });
+
+      const minCost = Math.min(...card.freight_options.quotes.map(q => q.cost_usd));
+      const minTime = Math.min(...card.freight_options.quotes.map(q => q.transit_days));
+
       return (
         <div className="space-y-4">
-          <h2 className="text-on-surface text-lg font-bold mb-4">Select Alternative</h2>
-          {card.freight_options.quotes.map(q => (
-            <div 
-              key={q.quote_id}
-              onClick={() => handleRedirectSubmit(q.quote_id)}
-              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 cursor-pointer hover:border-primary transition-colors"
-            >
-              <p className="text-on-surface font-medium text-sm">{q.mode} via {q.carrier} · ${q.cost_usd.toLocaleString()} · ETA {q.transit_days} days</p>
-            </div>
-          ))}
+          <h2 className="text-on-surface text-lg font-bold mb-4">Select Alternative Route</h2>
+          {sortedQuotes.map(q => {
+            const isRecommended = q.quote_id === card.cost_analysis.best_reroute_option?.quote_id;
+            const isCheapest = q.cost_usd === minCost;
+            const isFastest = q.transit_days === minTime;
+
+            return (
+              <div 
+                key={q.quote_id}
+                onClick={() => handleRedirectSubmit(q.quote_id)}
+                className={`border rounded-lg p-3 cursor-pointer transition-colors relative ${isRecommended ? 'bg-emerald-50 border-emerald-400 hover:bg-emerald-100' : 'bg-surface-container-lowest border-outline-variant hover:border-primary'}`}
+              >
+                {isRecommended && (
+                   <span className="absolute -top-2.5 right-3 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">Recommended</span>
+                )}
+                
+                <div className="flex justify-between items-start mb-2">
+                  <p className={`font-bold text-sm ${isRecommended ? 'text-emerald-900' : 'text-on-surface'}`}>{q.mode} via {q.carrier}</p>
+                  <p className={`font-bold text-sm ${isRecommended ? 'text-emerald-700' : 'text-primary'}`}>${q.cost_usd.toLocaleString()}</p>
+                </div>
+                
+                <div className="flex justify-between items-center text-xs">
+                  <span className={`${isRecommended ? 'text-emerald-700' : 'text-on-surface-variant'} font-medium`}>ETA: {q.transit_days} days</span>
+                  
+                  <div className="flex space-x-1">
+                    {isCheapest && !isRecommended && (
+                      <span className="bg-amber-100 text-amber-800 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Most Cost Effective</span>
+                    )}
+                    {isFastest && !isRecommended && (
+                      <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Fastest Route</span>
+                    )}
+                    {isRecommended && (
+                      <span className="bg-emerald-200 text-emerald-900 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Best Balance</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
           <button 
             onClick={() => setDecision(null)}
             className="w-full mt-4 bg-transparent hover:bg-surface-container-high text-on-surface-variant border border-outline-variant py-2 rounded-lg text-sm transition-colors font-medium"
