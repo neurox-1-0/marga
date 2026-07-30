@@ -268,7 +268,7 @@ async def simulate_news_article(
     triggered = []
     for disruption in result.disruptions:
         if disruption.is_disruption and disruption.confidence >= 0.4:  # Lower threshold for simulations
-            await _trigger_agent_from_news(disruption, articles_context)
+            asyncio.create_task(_trigger_agent_from_news(disruption, articles_context))
             triggered.append({
                 "type": disruption.disruption_type,
                 "severity": disruption.severity,

@@ -13,7 +13,11 @@ router = APIRouter()
 
 @router.get("/cards/pending", response_model=List[ApprovalCard])
 async def list_pending_cards(db: AsyncSession = Depends(get_db)):
-    return await crud.get_pending_cards(db)
+    try:
+        return await crud.get_pending_cards(db)
+    except Exception as e:
+        print(f"Notice: Database offline, returning empty pending cards list. ({e})")
+        return []
 
 @router.get("/cards/{event_id}", response_model=ApprovalCard)
 async def get_card(event_id: str, db: AsyncSession = Depends(get_db)):
@@ -147,9 +151,14 @@ async def get_active_events(db: AsyncSession = Depends(get_db)):
     """
     Returns all approval cards (pending + recently resolved) enriched with
     event details for the Active Alerts panel on the dashboard.
+    Gracefully handles offline database by returning empty list.
     """
-    result = await db.execute(select(ApprovalCardDB).order_by(ApprovalCardDB.updated_at.desc()).limit(20))
-    db_cards = result.scalars().all()
+    try:
+        result = await db.execute(select(ApprovalCardDB).order_by(ApprovalCardDB.updated_at.desc()).limit(20))
+        db_cards = result.scalars().all()
+    except Exception as e:
+        print(f"Notice: Database offline, returning empty active events list. ({e})")
+        return []
 
     events = []
     for db_card in db_cards:

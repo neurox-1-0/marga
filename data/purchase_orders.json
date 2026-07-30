@@ -134,5 +134,39 @@
                 "rate": 3500.0
             }
         ]
+    },
+    {
+        "name": "PO-5001",
+        "docstatus": 1,
+        "supplier": "Saudi Aramco",
+        "custom_vessel_id": "Evergreen",
+        "custom_route": "Middle East to Europe via Suez Canal",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-901"],
+        "items": [
+            {
+                "item_code": "OIL-001",
+                "item_name": "Crude Oil Barrels",
+                "qty": 10000,
+                "rate": 80.0
+            }
+        ]
+    },
+    {
+        "name": "PO-5002",
+        "docstatus": 1,
+        "supplier": "QatarEnergy",
+        "custom_vessel_id": "Evergreen",
+        "custom_route": "Middle East to Europe via Suez Canal",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-902"],
+        "items": [
+            {
+                "item_code": "LNG-001",
+                "item_name": "LNG Tanks",
+                "qty": 5000,
+                "rate": 120.0
+            }
+        ]
     }
 ]
