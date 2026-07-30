@@ -253,4 +253,18 @@ async def simulate_news_event(
     """
     from .services.news_poller import simulate_news_article
     result = await simulate_news_article(headline, description, source)
+    
+    from .websockets.manager import broadcast_api_call
+    await broadcast_api_call(
+        service="Marga Agent Backend",
+        endpoint="/events/news/simulate",
+        request_payload={
+            "headline": headline,
+            "description": description,
+            "source": source
+        },
+        response_payload=result,
+        status=200
+    )
+    
     return result
