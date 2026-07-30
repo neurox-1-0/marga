@@ -72,6 +72,11 @@ async def startup():
     app.state.poller_task = asyncio.create_task(run_poller())
     print("NOAA maritime alert poller started.")
 
+    # Start News background polling task
+    from .services.news_poller import run_news_poller
+    app.state.news_poller_task = asyncio.create_task(run_news_poller())
+    print("News intelligence poller started.")
+
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -79,6 +84,8 @@ async def shutdown():
         await app.state.pool.close()
     if hasattr(app.state, "poller_task"):
         app.state.poller_task.cancel()
+    if hasattr(app.state, "news_poller_task"):
+        app.state.news_poller_task.cancel()
 
 @app.get("/")
 def read_root():
@@ -201,3 +208,34 @@ async def simulate_event(
         "route": route,
         "vessel_id": vessel_id,
     }
+
+
+# ── News Intelligence endpoints ────────────────────────────────────────────
+
+@app.get("/events/news/status", tags=["Events"])
+def get_news_polling_status():
+    """
+    Returns the current status of the News intelligence poller:
+    whether it's running, when it last polled, how many articles
+    have been analyzed, and how many disruptions triggered.
+    """
+    from .services.news_poller import get_news_status
+    return get_news_status()
+
+
+@app.post("/events/news/simulate", tags=["Events"])
+async def simulate_news_event(
+    headline: str = "Major port strike shuts down Shanghai Terminal 2, affecting Trans-Pacific shipping",
+    description: str = "Workers at Shanghai's busiest container terminal have launched an indefinite strike, halting operations and causing severe delays for vessels on the Trans-Pacific route to Los Angeles and Long Beach.",
+    source: str = "Reuters",
+):
+    """
+    Manually simulate a news article and run it through Gemini 2.5 Pro
+    analysis. If the LLM identifies a real disruption, it triggers the
+    full LangGraph agent pipeline.
+
+    Perfect for demos — no NEWS_API_KEY required.
+    """
+    from .services.news_poller import simulate_news_article
+    result = await simulate_news_article(headline, description, source)
+    return result
