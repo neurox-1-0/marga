@@ -20,6 +20,15 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
     Dynamically routes the state based on LLM reasoning, ensuring no hardcoded if/else chains.
     """
     # Build context for the LLM
+    news_analysis = state.get("llm_disruption_analysis")
+    news_info = ""
+    if news_analysis:
+        news_info = (
+            f"News Source: Yes (type: {news_analysis.get('disruption_type', '?')}, "
+            f"severity: {news_analysis.get('severity', '?')})\n"
+            f"LLM-Suggested Alternatives: {', '.join(news_analysis.get('alternative_routes', []))}\n"
+        )
+
     context_msg = (
         f"Current Step: {state.get('current_step', 'start')}\n"
         f"Event ID: {state.get('event_id')}\n"
@@ -27,6 +36,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         f"Has Freight Quotes: {len(state.get('freight_quotes', [])) > 0}\n"
         f"Has Cost Analysis: {state.get('cost_analysis') is not None}\n"
         f"Approval Decision: {state.get('approval_decision')}\n"
+        f"{news_info}"
     )
     
     prompt = f"""

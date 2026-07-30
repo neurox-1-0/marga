@@ -199,3 +199,18 @@ export async function simulateEvent(params: {
   if (!res.ok) throw new Error('Failed to simulate event');
   return res.json();
 }
+
+export async function simulateNewsEvent(params: {
+  headline: string;
+  description: string;
+  source: string;
+}): Promise<any> {
+  const query = new URLSearchParams({
+    headline: params.headline,
+    description: params.description,
+    source: params.source,
+  });
+  const res = await fetch(`${API_BASE}/events/news/simulate?${query}`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to simulate news event');
+  return res.json();
+}
