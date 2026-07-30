@@ -67,7 +67,7 @@ SEA_PATHS: dict = {
         [-30.0, 38.0], [-55.0, 40.0], [-74.05, 40.65],
     ],
     "Rotterdam-New York": [
-        [4.49, 51.9], [-2.0, 50.5], [-10.0, 49.0],
+        [4.49, 51.9], [1.5, 51.1], [-2.0, 50.5], [-10.0, 49.0],
         [-20.0, 46.0], [-35.0, 42.0], [-50.0, 40.0],
         [-65.0, 40.0], [-74.05, 40.65],
     ],
@@ -77,7 +77,7 @@ SEA_PATHS: dict = {
         [60.0, 15.0], [50.0, 12.0], [43.0, 12.5],
         [39.0, 21.0], [32.33, 30.57], [30.0, 31.5],
         [15.0, 35.0], [0.0, 36.0], [-5.5, 35.8],
-        [-2.0, 44.0], [0.0, 50.5], [4.49, 51.9],
+        [-10.0, 39.0], [-6.0, 48.0], [0.0, 50.5], [4.49, 51.9],
     ],
 }
 
@@ -99,15 +99,38 @@ def _parse_route(route_text: str):
     return (origin, dest) if (origin and dest) else None
 
 
+def subdivide_path(path: list, max_dist: float = 4.0) -> list:
+    if not path:
+        return path
+    new_path = []
+    for i in range(len(path) - 1):
+        p1 = path[i]
+        p2 = path[i+1]
+        new_path.append(p1)
+        dist = ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**0.5
+        if dist > max_dist:
+            num_steps = int(dist // max_dist)
+            for step in range(1, num_steps + 1):
+                f = step / (num_steps + 1)
+                new_lng = p1[0] + (p2[0] - p1[0]) * f
+                new_lat = p1[1] + (p2[1] - p1[1]) * f
+                new_path.append([round(new_lng, 4), round(new_lat, 4)])
+    new_path.append(path[-1])
+    return new_path
+
+
 def _get_sea_path(origin: str, dest: str) -> list:
     key = f"{origin}-{dest}"
+    path = []
     if key in SEA_PATHS:
-        return SEA_PATHS[key]
-    rev = f"{dest}-{origin}"
-    if rev in SEA_PATHS:
-        return list(reversed(SEA_PATHS[rev]))
-    # Straight-line fallback
-    return [PORT_REGISTRY[origin]["coords"], PORT_REGISTRY[dest]["coords"]]
+        path = SEA_PATHS[key]
+    else:
+        rev = f"{dest}-{origin}"
+        if rev in SEA_PATHS:
+            path = list(reversed(SEA_PATHS[rev]))
+        else:
+            path = [PORT_REGISTRY[origin]["coords"], PORT_REGISTRY[dest]["coords"]]
+    return subdivide_path(path)
 
 
 @router.get("/routes")
