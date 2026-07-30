@@ -9,7 +9,6 @@ import {
   ActiveEvent,
   POAtRisk,
 } from "../lib/api";
-import { RouteMap } from "../components/RouteMap";
 
 function formatUSD(val: number): string {
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
@@ -52,6 +51,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     const interval = setInterval(refresh, 30_000); // Poll every 30s
     return () => clearInterval(interval);
@@ -251,14 +251,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Map & Routes Grid */}
-        <div className="grid grid-cols-3 gap-unit-lg min-h-[340px]">
-          <div className="col-span-2 h-[340px]">
-            <RouteMap activeStep={activeStep} />
-          </div>
-
+        {/* Routes & Alerts Grid */}
+        <div className="grid grid-cols-3 gap-unit-lg">
           {/* Live Route Risk List */}
-          <div className="card-surface rounded-xl flex flex-col col-span-1 h-[340px]">
+          <div className="card-surface rounded-xl flex flex-col col-span-1 h-[400px]">
             <div className="p-unit-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low rounded-t-xl">
               <h2 className="text-sm font-semibold text-on-surface">Routes at Risk</h2>
               <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">Live ERP</span>
@@ -303,11 +299,10 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Active Alerts Panel */}
-        <div className="card-surface rounded-xl">
-          <div className="p-unit-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low rounded-t-xl">
+          {/* Active Alerts Panel */}
+          <div className="card-surface rounded-xl flex flex-col col-span-2 h-[400px]">
+            <div className="p-unit-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low rounded-t-xl shrink-0">
             <div className="flex items-center space-x-2">
               <span className="material-symbols-outlined text-amber-600 text-[18px]">notifications_active</span>
               <h2 className="text-sm font-semibold text-on-surface">Active Alerts</h2>
@@ -317,10 +312,10 @@ export default function HomePage() {
             </div>
             <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">From agent</span>
           </div>
-          <div className="divide-y divide-outline-variant">
+          <div className="divide-y divide-outline-variant flex-1 overflow-y-auto">
             {activeEvents.length === 0 ? (
               <div className="p-unit-md text-[12px] text-on-surface-variant">
-                No active alerts. Use "Simulate Disruption" to trigger the agent.
+                No active alerts. Use &quot;Simulate Disruption&quot; to trigger the agent.
               </div>
             ) : (
               activeEvents.map((evt) => {
@@ -349,6 +344,7 @@ export default function HomePage() {
                 );
               })
             )}
+            </div>
           </div>
         </div>
 
@@ -445,10 +441,10 @@ export default function HomePage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5 shrink-0"></span>
               NOAA polling every 5 min · {activeEvents.length} event{activeEvents.length !== 1 ? "s" : ""} tracked
             </div>
-            <a href="/alerts" className="w-full bg-primary text-white py-2 rounded-lg text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center space-x-2 shadow-sm">
+            <Link href="/alerts" className="w-full bg-primary text-white py-2 rounded-lg text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center space-x-2 shadow-sm">
               <span>View Pending Actions</span>
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

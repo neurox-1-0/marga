@@ -129,6 +129,7 @@ export async function triggerDemoDisruption(eventId: string): Promise<{ status: 
   return response.json();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function connectAgentStream(onMessage: (data: any) => void): () => void {
   let ws: WebSocket | null = null;
   let isIntentionalClose = false;
@@ -148,6 +149,7 @@ export function connectAgentStream(onMessage: (data: any) => void): () => void {
     };
     
     ws.onerror = (error) => {
+      if (isIntentionalClose) return;
       console.error("WebSocket error:", error);
     };
 

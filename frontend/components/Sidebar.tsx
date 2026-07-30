@@ -25,9 +25,9 @@ export default function Sidebar() {
           <span className="material-symbols-outlined text-[20px]">inventory_2</span>
           <span className="text-sm">Active Alerts</span>
         </Link>
-        <Link href="#" className="flex items-center space-x-unit-md px-unit-md py-unit-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors group">
-          <span className="material-symbols-outlined text-[20px]">timeline</span>
-          <span className="text-sm">Supply Chain Graph</span>
+        <Link href="/map" className={`flex items-center space-x-unit-md px-unit-md py-unit-sm rounded-lg group transition-colors ${pathname.startsWith('/map') ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+          <span className="material-symbols-outlined text-[20px]">public</span>
+          <span className="text-sm">Global Route Map</span>
         </Link>
         <Link href="/history" className={`flex items-center space-x-unit-md px-unit-md py-unit-sm rounded-lg group transition-colors ${pathname.startsWith('/history') ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
           <span className="material-symbols-outlined text-[20px]">history</span>
