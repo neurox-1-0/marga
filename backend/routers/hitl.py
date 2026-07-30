@@ -62,7 +62,22 @@ async def record_decision(
         
     background_tasks.add_task(resume_graph)
 
-    return {"status": "recorded", "decision": decision.decision}
+    response_data = {"status": "recorded", "decision": decision.decision}
+    
+    from ..websockets.manager import broadcast_api_call
+    await broadcast_api_call(
+        service="Marga Agent Backend",
+        endpoint=f"/cards/{event_id}/decision",
+        request_payload={
+            "decision": decision.decision,
+            "chosen_quote_id": decision.chosen_quote_id,
+            "manager_note": decision.manager_note
+        },
+        response_payload=response_data,
+        status=200
+    )
+
+    return response_data
 
 
 # ── Live Dashboard Data Endpoints ──────────────────────────────────────────

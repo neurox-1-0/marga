@@ -23,7 +23,7 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
     Checks what data is missing from the agent state and calls the appropriate
     tool to fill the gap. Broadcasts each step as a visible agent thought.
     """
-    from ...websockets.manager import broadcast_agent_thought
+    from ...websockets.manager import broadcast_agent_thought, broadcast_api_call
 
     # Include news context in the initial broadcast if available
     news_analysis = state.get("llm_disruption_analysis")
@@ -52,7 +52,16 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
         vessel_id = raw_event.get("vessel_id", "")
         route = raw_event.get("route", "")
 
-        result = query_erp.invoke({"vessel_id": vessel_id, "route": route})
+        request_payload = {"vessel_id": vessel_id, "route": route}
+        result = query_erp.invoke(request_payload)
+
+        await broadcast_api_call(
+            service="Mock ERP System",
+            endpoint="/exposure",
+            request_payload=request_payload,
+            response_payload=result,
+            status=500 if result.get("status") == "error" else 200
+        )
 
         if result.get("status") == "error":
             await broadcast_agent_thought(
@@ -88,11 +97,20 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
             parts = route.split(" to ", 1)
             origin, destination = parts[0].strip(), parts[1].strip()
 
-        quotes = get_freight_quotes.invoke({
+        request_payload = {
             "origin": origin,
             "destination": destination,
             "weight_kg": 50000.0,
-        })
+        }
+        quotes = get_freight_quotes.invoke(request_payload)
+
+        await broadcast_api_call(
+            service="Mock Freight Carrier",
+            endpoint="/quotes",
+            request_payload=request_payload,
+            response_payload={"quotes": quotes},
+            status=500 if any("error" in q for q in quotes) else 200
+        )
 
         # If we have LLM-suggested alternative routes from news analysis,
         # also request quotes for those routes
