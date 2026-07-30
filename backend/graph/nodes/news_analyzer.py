@@ -113,6 +113,14 @@ Analyze these articles and identify any supply chain disruptions."""
         return result
     except Exception as e:
         logger.error(f"[News Analyzer] Gemini analysis failed: {e}")
+        from ...websockets.manager import broadcast_api_call
+        await broadcast_api_call(
+            service="Google Gemini API",
+            endpoint="/models/gemini-3.6-flash:generateContent (News Analyzer)",
+            request_payload={"prompt": "Analyze these articles and identify any supply chain disruptions."},
+            response_payload={"error": str(e)},
+            status=429 if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e) else 500
+        )
         return NewsAnalysisResult(
             disruptions=[],
             summary=f"Analysis failed: {str(e)}"

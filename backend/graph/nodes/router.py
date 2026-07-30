@@ -55,7 +55,18 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
     {context_msg}
     """
     
-    decision: RouterDecision = await router_llm.ainvoke([HumanMessage(content=prompt)])
+    try:
+        decision: RouterDecision = await router_llm.ainvoke([HumanMessage(content=prompt)])
+    except Exception as e:
+        from ...websockets.manager import broadcast_api_call
+        await broadcast_api_call(
+            service="Google Gemini API",
+            endpoint="/models/gemini-3.6-flash:generateContent (Router)",
+            request_payload={"prompt": "Determine next routing node..."},
+            response_payload={"error": str(e)},
+            status=429 if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e) else 500
+        )
+        raise e
     
     # Broadcast thought
     from ...websockets.manager import broadcast_agent_thought

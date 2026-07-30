@@ -145,6 +145,63 @@ async def trigger_disruption(event_id: str = "EVT-9999"):
     return {"status": "started", "thread_id": thread_id}
 
 
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+
+class SandboxPayload(BaseModel):
+    event_headline: str
+    event_description: str
+    severity: str
+    exposure_value_usd: float
+    matched_pos: List[str]
+    freight_quotes: List[Dict[str, Any]]
+
+@app.post("/simulate-sandbox")
+async def simulate_sandbox(payload: SandboxPayload):
+    import uuid
+    event_id = f"SBX-{str(uuid.uuid4())[:6].upper()}"
+    thread_id = f"{event_id}-{str(uuid.uuid4())}"
+    config = {"configurable": {"thread_id": thread_id}}
+    
+    from .db import crud
+    from .models.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        await crud.save_thread(db, event_id, thread_id)
+        
+    initial_state = {
+        "event_id": event_id,
+        "raw_event": {
+            "vessel_id": "SANDBOX-01",
+            "source": "Sandbox Editor",
+            "route": "Custom Scenario",
+            "description": payload.event_description,
+        },
+        "news_context": f"Headline: {payload.event_headline}",
+        "llm_disruption_analysis": {
+            "disruption_type": "Custom Sandbox Event",
+            "severity": payload.severity,
+        },
+        "matched_pos": payload.matched_pos,
+        "exposure_value": payload.exposure_value_usd,
+        "freight_quotes": payload.freight_quotes,
+    }
+    
+    async def run_graph_task():
+        try:
+            print(f"Starting Sandbox graph for {event_id}...")
+            await graph.ainvoke(initial_state, config=config)
+            print(f"Sandbox Graph completed successfully for {event_id}.")
+        except Exception as e:
+            print(f"CRITICAL ERROR IN SANDBOX GRAPH EXECUTION: {e}")
+            import traceback
+            traceback.print_exc()
+
+    import asyncio
+    asyncio.create_task(run_graph_task())
+    return {"status": "started", "event_id": event_id, "thread_id": thread_id}
+
+
+
 # ── NOAA Polling endpoints ──────────────────────────────────────────────────
 
 @app.get("/events/polling/status", tags=["Events"])
