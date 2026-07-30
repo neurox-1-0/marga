@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
   connectAgentStream,
   simulateEvent,
