@@ -9,6 +9,7 @@ import {
   InventoryAtRisk,
   ActiveEvent,
   POAtRisk,
+  simulateNewsEvent,
 } from "../lib/api";
 
 function formatUSD(val: number): string {
@@ -154,14 +155,72 @@ export default function HomePage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span>
               NOAA Polling Active
             </span>
-            <button
-              onClick={() => handleSimulate()}
-              disabled={triggering}
-              className="bg-primary text-white text-[11px] px-unit-md py-unit-sm rounded-lg flex items-center shadow-sm hover:brightness-110 disabled:opacity-60"
-            >
-              <span className="material-symbols-outlined text-[16px] mr-1">smart_toy</span>
-              {triggering ? "Starting…" : "Simulate Disruption"}
-            </button>
+          </div>
+        </div>
+
+        {/* Crisis Scenarios */}
+        <div className="bg-surface-container-low p-unit-md rounded-xl border border-outline-variant space-y-unit-md">
+          <div className="flex items-center space-x-2 text-primary">
+            <span className="material-symbols-outlined text-[18px]">public</span>
+            <h2 className="text-[13px] font-bold">Live Demo Scenarios (News Intelligence)</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              {
+                label: "Hormuz Closed",
+                headline: "Strait of Hormuz Blocked After Security Incident",
+                description: "All commercial traffic through the Strait of Hormuz has been halted indefinitely following a major security incident, severely disrupting Middle East to Europe shipping routes.",
+                source: "Reuters"
+              },
+              {
+                label: "Bab el Mandeb Closed",
+                headline: "Bab el Mandeb Strait Closed to Commercial Shipping",
+                description: "Due to escalating regional tensions, maritime authorities have closed the Bab el Mandeb Strait. Vessels are being forced to reroute around the Cape of Good Hope, adding weeks to Asia-Europe transit times.",
+                source: "Bloomberg"
+              },
+              {
+                label: "Malacca Closed",
+                headline: "Strait of Malacca Shut Down Due to Massive Collision",
+                description: "A catastrophic collision involving three mega-ships has completely blocked the Strait of Malacca. Authorities state it may take weeks to clear the vital waterway connecting Asian manufacturing hubs to global markets.",
+                source: "Lloyd's List"
+              },
+              {
+                label: "Suez Blocked",
+                headline: "Ever Given 2.0: Mega-Ship Runs Aground in Suez Canal",
+                description: "A 24,000 TEU container ship has run aground and completely blocked the Suez Canal in both directions. Hundreds of ships are backing up as salvage crews struggle to free the vessel.",
+                source: "WSJ"
+              }
+            ].map(scenario => (
+              <button
+                key={scenario.label}
+                onClick={async () => {
+                  try {
+                    setTriggering(true);
+                    setActiveStep(1);
+                    const res = await simulateNewsEvent({
+                      headline: scenario.headline,
+                      description: scenario.description,
+                      source: scenario.source
+                    });
+                    if (res.disruptions_triggered > 0) {
+                      setToast(`Agent started — processing news disruption from ${scenario.source}`);
+                    } else {
+                      setToast(`News processed, but LLM did not confidently trigger a disruption.`);
+                    }
+                    setTimeout(() => setToast(null), 8000);
+                  } catch (e: any) {
+                    alert(`Failed to simulate news: ${e.message}`);
+                  } finally {
+                    setTriggering(false);
+                  }
+                }}
+                disabled={triggering}
+                className="bg-primary text-white text-[11px] px-unit-md py-unit-sm rounded-lg flex items-center shadow-sm hover:brightness-110 disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined text-[14px] mr-1.5">newspaper</span>
+                {triggering ? "Starting…" : scenario.label}
+              </button>
+            ))}
           </div>
         </div>
 

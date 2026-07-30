@@ -83,5 +83,56 @@
                 "rate": 150.0
             }
         ]
+    },
+    {
+        "name": "PO-3001",
+        "docstatus": 1,
+        "supplier": "Dubai Petrochem LLC",
+        "custom_vessel_id": "Gulf-Express-1",
+        "custom_route": "Dubai to Rotterdam",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-701"],
+        "items": [
+            {
+                "item_code": "CHEM-001",
+                "item_name": "Industrial Polymers",
+                "qty": 5000,
+                "rate": 200.0
+            }
+        ]
+    },
+    {
+        "name": "PO-3002",
+        "docstatus": 1,
+        "supplier": "Mumbai Textiles Corp",
+        "custom_vessel_id": "Suez-Star",
+        "custom_route": "Mumbai to London",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-702"],
+        "items": [
+            {
+                "item_code": "TEX-002",
+                "item_name": "Premium Cotton Rolls",
+                "qty": 2000,
+                "rate": 450.0
+            }
+        ]
+    },
+    {
+        "name": "PO-4001",
+        "docstatus": 1,
+        "supplier": "Singapore Electronics Hub",
+        "custom_vessel_id": "Malacca-Trader",
+        "custom_route": "Singapore to Hamburg",
+        "custom_match_confidence": 1.0,
+        "custom_customer_order_ids": ["CO-801"],
+        "items": [
+            {
+                "item_code": "ELEC-005",
+                "item_name": "Semiconductor Wafers",
+                "qty": 500,
+                "rate": 3500.0
+            }
+        ]
     }
 ]

@@ -25,9 +25,22 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
     """
     from ...websockets.manager import broadcast_agent_thought
 
+    # Include news context in the initial broadcast if available
+    news_analysis = state.get("llm_disruption_analysis")
+    news_ctx = state.get("news_context", "")
+    alt_routes = state.get("alternative_routes_suggested", [])
+
+    initial_thought = "Analyzing disruption event and determining required actions..."
+    if news_analysis:
+        initial_thought += (
+            f" Source: News intelligence ({news_analysis.get('disruption_type', 'unknown')}). "
+            f"Severity: {news_analysis.get('severity', 'unknown')}. "
+            f"LLM-suggested alternatives: {', '.join(alt_routes) if alt_routes else 'none yet'}."
+        )
+
     await broadcast_agent_thought(
         node="reasoning_node",
-        thought="Analyzing disruption event and determining required actions...",
+        thought=initial_thought,
         confidence_score=0.9,
     )
 
@@ -81,6 +94,30 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
             "weight_kg": 50000.0,
         })
 
+        # If we have LLM-suggested alternative routes from news analysis,
+        # also request quotes for those routes
+        if alt_routes:
+            for alt_route in alt_routes[:3]:  # Cap at 3 alternatives
+                if " to " in alt_route or " via " in alt_route:
+                    # Try to parse "via PortX" or "Origin to Dest" format
+                    alt_origin = origin
+                    alt_dest = destination
+                    if " to " in alt_route:
+                        parts = alt_route.split(" to ", 1)
+                        alt_origin, alt_dest = parts[0].strip(), parts[1].strip()
+                    elif " via " in alt_route:
+                        alt_dest = alt_route.split(" via ", 1)[1].strip()
+
+                    try:
+                        alt_quotes = get_freight_quotes.invoke({
+                            "origin": alt_origin,
+                            "destination": alt_dest,
+                            "weight_kg": 50000.0,
+                        })
+                        quotes.extend(alt_quotes)
+                    except Exception:
+                        pass  # Don't fail if an alternative route query fails
+
         # Filter out error entries
         valid_quotes = [q for q in quotes if "error" not in q]
 
@@ -93,9 +130,12 @@ async def reasoning_node(state: AgentState) -> Dict[str, Any]:
             updates["freight_quotes"] = [{"error": "No quotes available"}]
         else:
             updates["freight_quotes"] = valid_quotes
+            alt_note = ""
+            if alt_routes:
+                alt_note = f" (includes quotes for LLM-suggested alternatives: {', '.join(alt_routes[:3])})"
             await broadcast_agent_thought(
                 node="reasoning_node",
-                thought=f"Obtained {len(valid_quotes)} alternative freight quotes.",
+                thought=f"Obtained {len(valid_quotes)} alternative freight quotes.{alt_note}",
                 confidence_score=0.92,
                 tool_calls=[{"tool_name": "get_freight_quotes", "rationale": "Finding rerouting options."}],
             )

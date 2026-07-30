@@ -13,6 +13,11 @@ class AgentState(TypedDict):
     current_step: str
     messages: List[Any]
     
+    # News intelligence (populated by news_poller when source is NEWS)
+    news_context: Optional[str]
+    llm_disruption_analysis: Optional[Dict[str, Any]]
+    alternative_routes_suggested: Optional[List[str]]
+    
     # HITL Action
     approval_decision: Optional[str]
     chosen_quote_id: Optional[str]
