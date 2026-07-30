@@ -221,7 +221,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ activeStep = 1, onSelectRout
   const [dataSource, setDataSource] = useState<'live' | 'demo'>('demo');
 
   useEffect(() => {
-    const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000';
+    const BACKEND = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8004';
     fetch(`${BACKEND}/map/routes`)
       .then((r) => r.json())
       .then((data) => {
