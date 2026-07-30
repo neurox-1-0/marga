@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   connectAgentStream,
   simulateEvent,
@@ -90,9 +91,9 @@ export default function HomePage() {
       setTimeout(() => setToast(null), 8000);
       // Refresh after a brief delay to pick up the new card
       setTimeout(refresh, 3000);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to trigger disruption");
+      alert(`Failed to trigger disruption: ${e.message || String(e)}`);
     } finally {
       setTriggering(false);
     }
@@ -171,86 +172,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Live Stat Cards */}
-        <div className="grid grid-cols-4 gap-unit-md">
-          {/* Active Disruptions */}
-          <div className="card-surface p-unit-md rounded-xl flex flex-col justify-between h-36">
-            <div className="flex justify-between items-center text-on-surface-variant mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest">Active Disruptions</span>
-              <span className="material-symbols-outlined text-amber-600 text-[18px]">warning</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-on-surface leading-none">
-                  {loadingInventory ? "—" : pendingCount}
-                </div>
-                <div className="text-[10px] text-on-surface-variant mt-1">
-                  {pendingCount === 0 ? "All clear" : `${pendingCount} awaiting review`}
-                </div>
-              </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pendingCount > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                {pendingCount > 0 ? "Action needed" : "Nominal"}
-              </span>
-            </div>
-          </div>
 
-          {/* POs at Risk */}
-          <div className="card-surface p-unit-md rounded-xl flex flex-col justify-between h-36">
-            <div className="flex justify-between items-center text-on-surface-variant mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest">POs Tracked</span>
-              <span className="material-symbols-outlined text-primary text-[18px]">package_2</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-on-surface leading-none">
-                  {loadingInventory ? "—" : atRiskPos}
-                </div>
-                <div className="text-[10px] text-on-surface-variant mt-1">
-                  Across {inventory?.routes.length ?? 0} route{inventory?.routes.length !== 1 ? "s" : ""}
-                </div>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                Live ERP
-              </span>
-            </div>
-          </div>
-
-          {/* Est. Exposure */}
-          <div className="card-surface p-unit-md rounded-xl flex flex-col justify-between h-36">
-            <div className="flex justify-between items-center text-on-surface-variant mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest">Est. Exposure</span>
-              <span className="material-symbols-outlined text-error text-[18px]">payments</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-on-surface leading-none">
-                  {loadingInventory ? "—" : formatUSD(totalExposure)}
-                </div>
-                <div className="text-[10px] text-on-surface-variant mt-1">Total inventory value</div>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error/10 text-error">
-                In Transit
-              </span>
-            </div>
-          </div>
-
-          {/* SLA Health */}
-          <div className="card-surface p-unit-md rounded-xl flex flex-col justify-between h-36">
-            <div className="flex justify-between items-center text-on-surface-variant mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest">SLA Health</span>
-              <span className="material-symbols-outlined text-emerald-600 text-[18px]">verified</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-on-surface leading-none">{slaHealth}%</div>
-                <div className="text-[10px] text-on-surface-variant mt-1">Target: 95%</div>
-              </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${parseFloat(slaHealth) >= 95 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                {parseFloat(slaHealth) >= 95 ? "On Target" : "Below Target"}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Routes & Alerts Grid */}
         <div className="grid grid-cols-3 gap-unit-lg">
