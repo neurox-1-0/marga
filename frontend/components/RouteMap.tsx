@@ -117,8 +117,8 @@ const ARCS: ShippingArc[] = [
     to: { coordinates: [241.74, 33.73] },
     path: [
       [121.47, 31.23],   // Shanghai
-      [120.0, 25.0],     // Off west Taiwan coast
-      [121.5, 21.0],     // Bashi Channel (south of Taiwan)
+      [123.5, 25.0],     // East of Taiwan
+      [123.5, 21.0],     // Bashi Channel (south of Taiwan)
       [124.0, 18.0],     // Luzon Strait
       [130.0, 14.0],     // Philippine Sea
       [140.0, 12.0],     // Western Pacific (Palau)

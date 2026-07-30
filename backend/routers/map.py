@@ -32,10 +32,10 @@ PORT_REGISTRY: dict = {
     "Antwerp":    {"name": "Port of Antwerp",     "code": "BEANR", "coords": [4.40, 51.23],     "region": "Europe"},
     "Felixstowe": {"name": "Port of Felixstowe",  "code": "GBFXT", "coords": [1.35, 51.96],     "region": "Europe"},
     # Americas
-    "Los Angeles":{"name": "Port of Los Angeles", "code": "USLAX", "coords": [-118.26, 33.73],  "region": "Americas"},
-    "Long Beach": {"name": "Port of Long Beach",  "code": "USLGB", "coords": [-118.22, 33.76],  "region": "Americas"},
+    "Los Angeles":{"name": "Port of Los Angeles", "code": "USLAX", "coords": [241.74, 33.73],  "region": "Americas"},
+    "Long Beach": {"name": "Port of Long Beach",  "code": "USLGB", "coords": [241.78, 33.76],  "region": "Americas"},
     "New York":   {"name": "Port of New York",    "code": "USNYC", "coords": [-74.05, 40.65],   "region": "Americas"},
-    "Seattle":    {"name": "Port of Seattle",     "code": "USSEA", "coords": [-122.34, 47.60],  "region": "Americas"},
+    "Seattle":    {"name": "Port of Seattle",     "code": "USSEA", "coords": [237.66, 47.60],  "region": "Americas"},
     "Houston":    {"name": "Port of Houston",     "code": "USHOU", "coords": [-95.06, 29.73],   "region": "Americas"},
     "Savannah":   {"name": "Port of Savannah",    "code": "USSAV", "coords": [-80.91, 32.08],   "region": "Americas"},
 }
@@ -47,16 +47,16 @@ SEA_PATHS: dict = {
     "Shanghai-Los Angeles": [
         [121.47, 31.23], [123.5, 29.5], [130.0, 29.0],
         [145.0, 33.0], [170.0, 38.0], [200.0, 40.0],
-        [220.0, 38.0], [235.0, 34.0], [-118.26, 33.73],
+        [220.0, 38.0], [235.0, 34.0], [241.74, 33.73],
     ],
     "Shanghai-Long Beach": [
         [121.47, 31.23], [123.5, 29.5], [130.0, 29.0],
         [145.0, 33.0], [170.0, 38.0], [200.0, 40.0],
-        [220.0, 38.0], [235.0, 34.0], [-118.22, 33.76],
+        [220.0, 38.0], [235.0, 34.0], [241.78, 33.76],
     ],
     "Shanghai-Seattle": [
         [121.47, 31.23], [130.0, 36.0], [150.0, 44.0],
-        [175.0, 50.0], [200.0, 50.0], [220.0, 48.0], [-122.34, 47.60],
+        [175.0, 50.0], [200.0, 50.0], [220.0, 48.0], [237.66, 47.60],
     ],
     "Shanghai-New York": [
         [121.47, 31.23], [119.5, 24.5], [114.0, 15.0],
