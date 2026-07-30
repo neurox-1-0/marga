@@ -12,6 +12,7 @@ async def hitl_gate_node(state: AgentState) -> Dict[str, Any]:
     so the dashboard can display it, then halts execution via LangGraph's
     interrupt() and waits for a human decision from the dashboard.
     """
+
     cost_analysis_dict = state.get("cost_analysis", {}) or {}
     
     # Handle the case where best_reroute_option is a string vs dict
