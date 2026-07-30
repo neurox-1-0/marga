@@ -194,10 +194,27 @@ async def simulate_event(
             traceback.print_exc()
 
     asyncio.create_task(run_graph_task())
-    return {
+    
+    response_data = {
         "status": "started",
         "event_id": event_id,
         "thread_id": thread_id,
         "route": route,
         "vessel_id": vessel_id,
     }
+    
+    from .websockets.manager import broadcast_api_call
+    await broadcast_api_call(
+        service="Marga Agent Backend",
+        endpoint="/events/simulate",
+        request_payload={
+            "route": route,
+            "vessel_id": vessel_id,
+            "description": description,
+            "event_type": event_type,
+        },
+        response_payload=response_data,
+        status=200
+    )
+    
+    return response_data
