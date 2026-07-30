@@ -41,3 +41,15 @@ async def broadcast_agent_thought(node: str, thought: str, confidence_score: flo
             "tool_calls": tool_calls or []
         }
     })
+
+async def broadcast_api_call(service: str, endpoint: str, request_payload: dict, response_payload: dict, status: int = 200):
+    await manager.broadcast({
+        "type": "api_call",
+        "data": {
+            "service": service,
+            "endpoint": endpoint,
+            "request": request_payload,
+            "response": response_payload,
+            "status": status
+        }
+    })
