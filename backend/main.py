@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from .routers.ws import router as ws_router
 from .routers.hitl import router as hitl_router
+from .routers.map import router as map_router
 from .graph.builder import graph
 import uuid
 
@@ -98,6 +99,7 @@ def serve_dashboard():
 
 app.include_router(ws_router)
 app.include_router(hitl_router)
+app.include_router(map_router)
 
 
 @app.post("/trigger_disruption")
