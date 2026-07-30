@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 import os
 
 # We require an LLM for dynamic routing to satisfy NeuroX constraint #1
-llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
 class RouterDecision(BaseModel):
     next_node: str = Field(description="The name of the next node to route to: 'reasoning_node', 'hitl_gate', 'execute', or 'end'.")
